@@ -82,14 +82,14 @@ export default function DashboardPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Ringkasan Dashboard</h1>
-        <p className="text-slate-600 mt-1">Selamat datang kembali! Berikut ringkasan keuangan Anda.</p>
+        <h1 className="text-3xl font-bold text-slate-900">Dashboard Overview</h1>
+        <p className="text-slate-600 mt-1">Welcome back! Here's your financial summary.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Saldo</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
             <Wallet className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
@@ -97,14 +97,14 @@ export default function DashboardPage() {
               {formatRupiah(stats.balance)}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Saldo saat ini
+              Current balance
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
             <ArrowUpRight className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -112,14 +112,14 @@ export default function DashboardPage() {
               {formatRupiah(stats.totalIncome)}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Pemasukan keseluruhan
+              Total income
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Expenditure</CardTitle>
             <ArrowDownRight className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -127,14 +127,14 @@ export default function DashboardPage() {
               {formatRupiah(stats.totalExpense)}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Pengeluaran keseluruhan
+              Total expenditure
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transaksi</CardTitle>
+            <CardTitle className="text-sm font-medium">Transaction</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -142,7 +142,7 @@ export default function DashboardPage() {
               {stats.transactionCount}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Total transaksi
+              Total transactions
             </p>
           </CardContent>
         </Card>
@@ -150,12 +150,12 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Transaksi Terbaru</CardTitle>
+          <CardTitle>Latest Transactions</CardTitle>
         </CardHeader>
         <CardContent>
           {recentTransactions.length === 0 ? (
             <p className="text-slate-600 text-center py-8">
-              Belum ada transaksi. Mulai dengan menambahkan transaksi atau mengunggah struk!
+              There are no transactions yet. Start by adding a transaction or uploading a receipt!
             </p>
           ) : (
             <div className="space-y-4">

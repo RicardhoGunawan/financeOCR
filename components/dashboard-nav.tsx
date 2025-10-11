@@ -3,14 +3,15 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  Tags, 
-  BarChart3, 
-  ScanLine, 
+import {
+  LayoutDashboard,
+  Receipt,
+  Tags,
+  BarChart3,
+  ScanLine,
   LogOut,
-  X
+  X,
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,22 +21,22 @@ interface DashboardNavProps {
 
 const navItems = [
   {
-    title: 'Dashboard',
+    title: 'OverView',
     href: '/dashboard',
     icon: LayoutDashboard,
   },
   {
-    title: 'Transaksi',
+    title: 'Transactions',
     href: '/dashboard/transactions',
     icon: Receipt,
   },
   {
-    title: 'Kategori',
+    title: 'Categories',
     href: '/dashboard/categories',
     icon: Tags,
   },
   {
-    title: 'Analisis',
+    title: 'Analytics',
     href: '/dashboard/analytics',
     icon: BarChart3,
   },
@@ -52,9 +53,14 @@ export function DashboardNav({ onClose }: DashboardNavProps) {
   const { signOut, user } = useAuth();
 
   const handleSignOut = async () => {
+    const confirmLogout = window.confirm("Apakah Anda yakin ingin keluar?");
+    if (!confirmLogout) return;
+
     await signOut();
-    router.push('/auth');
+    setTimeout(() => router.push('/'), 100);
   };
+
+
 
   const handleNavClick = (href: string) => {
     router.push(href);
@@ -67,7 +73,7 @@ export function DashboardNav({ onClose }: DashboardNavProps) {
       <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-800">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-emerald-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm sm:text-lg">F</span>
+            <Wallet className="text-white font-bold text-sm sm:text-lg" />
           </div>
           <div>
             <h1 className="font-bold text-white text-sm sm:text-base">Finance App</h1>

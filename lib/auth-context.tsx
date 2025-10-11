@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await supabase.from('user_profiles').insert({
         user_id: data.user.id,
         full_name: fullName,
-        currency: 'USD',
+        currency: 'Rp',
       });
     }
 

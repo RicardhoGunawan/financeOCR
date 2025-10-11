@@ -207,9 +207,9 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Analisis Keuangan</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Financial Analysis</h1>
           <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Visualisasi pola dan tren keuangan Anda
+            Visualize your financial patterns and trends
           </p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
@@ -217,9 +217,9 @@ export default function AnalyticsPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="3months">3 Bulan Terakhir</SelectItem>
-            <SelectItem value="6months">6 Bulan Terakhir</SelectItem>
-            <SelectItem value="12months">12 Bulan Terakhir</SelectItem>
+            <SelectItem value="3months">Last 3 Months</SelectItem>
+            <SelectItem value="6months">Last 6 Mouths</SelectItem>
+            <SelectItem value="12months">Last 12 Months</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -228,33 +228,33 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rata-rata Pemasukan</CardTitle>
+            <CardTitle className="text-sm font-medium">Average Income</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-green-600 truncate">
               {formatRupiah(summary.avgIncome)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Per transaksi</p>
+            <p className="text-xs text-slate-600 mt-1">Per transaction</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rata-rata Pengeluaran</CardTitle>
+            <CardTitle className="text-sm font-medium">Average Expenditure</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-red-600 truncate">
               {formatRupiah(summary.avgExpense)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Per transaksi</p>
+            <p className="text-xs text-slate-600 mt-1">Per transaction</p>
           </CardContent>
         </Card>
 
         <Card className="sm:col-span-2 lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Aliran Bersih</CardTitle>
+            <CardTitle className="text-sm font-medium">Net Flow</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -267,7 +267,7 @@ export default function AnalyticsPage() {
             >
               {formatRupiah(summary.totalIncome - summary.totalExpense)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Saldo total</p>
+            <p className="text-xs text-slate-600 mt-1">Total balance</p>
           </CardContent>
         </Card>
       </div>
@@ -276,7 +276,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 mb-6 sm:mb-8">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Pemasukan vs Pengeluaran Bulanan</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Monthly Income vs Expenses</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -316,7 +316,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Aliran Bersih Bulanan</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Monthly Net Flow</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={250}>
@@ -346,11 +346,11 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Pengeluaran per Kategori</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Expenses by Category</CardTitle>
           </CardHeader>
           <CardContent>
             {categoryData.expense.length === 0 ? (
-              <p className="text-slate-600 text-center py-12 text-sm">Tidak ada data pengeluaran</p>
+              <p className="text-slate-600 text-center py-12 text-sm">No expense data</p>
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
@@ -379,11 +379,11 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Pemasukan per Kategori</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Income by Category</CardTitle>
           </CardHeader>
           <CardContent>
             {categoryData.income.length === 0 ? (
-              <p className="text-slate-600 text-center py-12 text-sm">Tidak ada data pemasukan</p>
+              <p className="text-slate-600 text-center py-12 text-sm">No income data</p>
             ) : (
               <ResponsiveContainer width="100%" height={250}>
                 <PieChart>

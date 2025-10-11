@@ -71,7 +71,7 @@ export default function TransactionsPage() {
       setTransactions(data || []);
     } catch (error) {
       console.error('Error loading transactions:', error);
-      toast.error('Gagal memuat transaksi');
+      toast.error('Failed to load transactions');
     } finally {
       setLoading(false);
     }
@@ -114,14 +114,14 @@ export default function TransactionsPage() {
           .eq('id', editingTransaction.id);
 
         if (error) throw error;
-        toast.success('Transaksi berhasil diperbarui');
+        toast.success('Transaction updated successfully');
       } else {
         const { error } = await supabase
           .from('transactions')
           .insert([transactionData]);
 
         if (error) throw error;
-        toast.success('Transaksi berhasil ditambahkan');
+        toast.success('Transaction added successfully');
       }
 
       setDialogOpen(false);
@@ -129,25 +129,21 @@ export default function TransactionsPage() {
       loadTransactions();
     } catch (error) {
       console.error('Error saving transaction:', error);
-      toast.error('Gagal menyimpan transaksi');
+      toast.error('Failed to save transaction');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) return;
+    if (!confirm('Are you sure you want to delete this transaction?')) return;
 
     try {
-      const { error } = await supabase
-        .from('transactions')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
-      toast.success('Transaksi berhasil dihapus');
+      toast.success('Transaction deleted successfully');
       loadTransactions();
     } catch (error) {
       console.error('Error deleting transaction:', error);
-      toast.error('Gagal menghapus transaksi');
+      toast.error('Failed to delete transaction');
     }
   };
 
@@ -189,46 +185,49 @@ export default function TransactionsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Transaksi</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Transactions</h1>
           <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Kelola pemasukan dan pengeluaran Anda
+            Manage your income and expenses
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
           <DialogTrigger asChild>
             <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
-              <span className="sm:inline">Tambah Transaksi</span>
+              <span className="sm:inline">Add Transaction</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {editingTransaction ? 'Edit Transaksi' : 'Tambah Transaksi Baru'}
+                {editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}
               </DialogTitle>
               <DialogDescription>
                 {editingTransaction
-                  ? 'Perbarui detail transaksi di bawah ini'
-                  : 'Masukkan detail transaksi di bawah ini'}
+                  ? 'Update the transaction details below'
+                  : 'Enter the transaction details below'}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Judul</Label>
+                <Label htmlFor="title">Title</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="contoh: Belanja bulanan"
+                  placeholder="e.g., Monthly groceries"
                   required
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Jumlah</Label>
+                  <Label htmlFor="amount">Amount</Label>
                   <Input
                     id="amount"
                     type="number"
@@ -240,7 +239,7 @@ export default function TransactionsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="type">Tipe</Label>
+                  <Label htmlFor="type">Type</Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value: 'income' | 'expense') =>
@@ -251,15 +250,15 @@ export default function TransactionsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="expense">Pengeluaran</SelectItem>
-                      <SelectItem value="income">Pemasukan</SelectItem>
+                      <SelectItem value="expense">Expense</SelectItem>
+                      <SelectItem value="income">Income</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date">Tanggal</Label>
+                  <Label htmlFor="date">Date</Label>
                   <Input
                     id="date"
                     type="date"
@@ -269,7 +268,7 @@ export default function TransactionsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Kategori</Label>
+                  <Label htmlFor="category">Category</Label>
                   <Select
                     value={formData.category_id}
                     onValueChange={(value) =>
@@ -277,7 +276,7 @@ export default function TransactionsPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Pilih kategori" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories
@@ -292,17 +291,17 @@ export default function TransactionsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="note">Catatan (opsional)</Label>
+                <Label htmlFor="note">Note (optional)</Label>
                 <Textarea
                   id="note"
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  placeholder="Tambahkan detail tambahan..."
+                  placeholder="Add additional details..."
                 />
               </div>
               <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <Button type="submit" className="flex-1">
-                  {editingTransaction ? 'Perbarui' : 'Tambah'} Transaksi
+                  {editingTransaction ? 'Update' : 'Add'} Transaction
                 </Button>
                 <Button
                   type="button"
@@ -313,7 +312,7 @@ export default function TransactionsPage() {
                   }}
                   className="flex-1 sm:flex-initial"
                 >
-                  Batal
+                  Cancel
                 </Button>
               </div>
             </form>
@@ -324,12 +323,12 @@ export default function TransactionsPage() {
       {/* Transactions List */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Semua Transaksi</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">All Transactions</CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
             <p className="text-slate-600 text-center py-8 text-sm sm:text-base">
-              Belum ada transaksi. Tambahkan transaksi pertama Anda!
+              No transactions yet. Add your first transaction!
             </p>
           ) : (
             <div className="space-y-3">
@@ -340,11 +339,10 @@ export default function TransactionsPage() {
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                     <div
-                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        transaction.type === 'income'
+                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0 ${transaction.type === 'income'
                           ? 'bg-green-100'
                           : 'bg-red-100'
-                      }`}
+                        }`}
                     >
                       {transaction.type === 'income' ? (
                         <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
@@ -358,10 +356,10 @@ export default function TransactionsPage() {
                       </p>
                       <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
                         <span>
-                          {new Date(transaction.date).toLocaleDateString('id-ID', {
+                          {new Date(transaction.date).toLocaleDateString('en-GB', {
                             day: 'numeric',
                             month: 'short',
-                            year: 'numeric'
+                            year: 'numeric',
                           })}
                         </span>
                         {transaction.category && (
@@ -377,18 +375,17 @@ export default function TransactionsPage() {
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
                     <div
-                      className={`text-base sm:text-xl font-bold ${
-                        transaction.type === 'income'
+                      className={`text-base sm:text-xl font-bold ${transaction.type === 'income'
                           ? 'text-green-600'
                           : 'text-red-600'
-                      }`}
+                        }`}
                     >
                       {transaction.type === 'income' ? '+' : '-'}
                       <span className="hidden sm:inline">
                         {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
                       </span>
                       <span className="sm:hidden">
-                        {(Number(transaction.amount) / 1000).toFixed(0)}k
+                        {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
                       </span>
                     </div>
                     <div className="flex gap-1 sm:gap-2">
