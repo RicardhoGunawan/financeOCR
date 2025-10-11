@@ -42,6 +42,16 @@ type CategoryData = {
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+// Fungsi untuk format Rupiah
+const formatRupiah = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 export default function AnalyticsPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -118,7 +128,7 @@ export default function AnalyticsPage() {
     const sortedData = Array.from(monthMap.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, data]) => ({
-        month: new Date(month).toLocaleDateString('en-US', {
+        month: new Date(month).toLocaleDateString('id-ID', {
           month: 'short',
           year: 'numeric',
         }),
@@ -135,7 +145,7 @@ export default function AnalyticsPage() {
     const expenseMap = new Map<string, number>();
 
     transactions.forEach((transaction) => {
-      const categoryName = transaction.category?.name || 'Uncategorized';
+      const categoryName = transaction.category?.name || 'Tidak Berkategori';
       const map = transaction.type === 'income' ? incomeMap : expenseMap;
       map.set(categoryName, (map.get(categoryName) || 0) + Number(transaction.amount));
     });
@@ -169,6 +179,23 @@ export default function AnalyticsPage() {
     });
   };
 
+  // Custom Tooltip dengan format Rupiah
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
+          <p className="font-medium text-slate-900 mb-2">{label}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} style={{ color: entry.color }} className="text-sm">
+              {entry.name}: {formatRupiah(entry.value)}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -181,17 +208,17 @@ export default function AnalyticsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Financial Analytics</h1>
-          <p className="text-slate-600 mt-1">Visualize your financial patterns and trends</p>
+          <h1 className="text-3xl font-bold text-slate-900">Analisis Keuangan</h1>
+          <p className="text-slate-600 mt-1">Visualisasi pola dan tren keuangan Anda</p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="3months">Last 3 Months</SelectItem>
-            <SelectItem value="6months">Last 6 Months</SelectItem>
-            <SelectItem value="12months">Last 12 Months</SelectItem>
+            <SelectItem value="3months">3 Bulan Terakhir</SelectItem>
+            <SelectItem value="6months">6 Bulan Terakhir</SelectItem>
+            <SelectItem value="12months">12 Bulan Terakhir</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -199,33 +226,33 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 md:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Income</CardTitle>
+            <CardTitle className="text-sm font-medium">Rata-rata Pemasukan</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ${summary.avgIncome.toFixed(2)}
+              {formatRupiah(summary.avgIncome)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Per transaction</p>
+            <p className="text-xs text-slate-600 mt-1">Per transaksi</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Expense</CardTitle>
+            <CardTitle className="text-sm font-medium">Rata-rata Pengeluaran</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              ${summary.avgExpense.toFixed(2)}
+              {formatRupiah(summary.avgExpense)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Per transaction</p>
+            <p className="text-xs text-slate-600 mt-1">Per transaksi</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Flow</CardTitle>
+            <CardTitle className="text-sm font-medium">Aliran Bersih</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -236,9 +263,9 @@ export default function AnalyticsPage() {
                   : 'text-red-600'
               }`}
             >
-              ${(summary.totalIncome - summary.totalExpense).toFixed(2)}
+              {formatRupiah(summary.totalIncome - summary.totalExpense)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Total balance</p>
+            <p className="text-xs text-slate-600 mt-1">Saldo total</p>
           </CardContent>
         </Card>
       </div>
@@ -246,29 +273,29 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-2 mb-8">
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Income vs Expenses</CardTitle>
+            <CardTitle>Pemasukan vs Pengeluaran Bulanan</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                <Tooltip content={<CustomTooltip />} />
                 <Legend />
                 <Line
                   type="monotone"
                   dataKey="income"
                   stroke="#10b981"
                   strokeWidth={2}
-                  name="Income"
+                  name="Pemasukan"
                 />
                 <Line
                   type="monotone"
                   dataKey="expense"
                   stroke="#ef4444"
                   strokeWidth={2}
-                  name="Expense"
+                  name="Pengeluaran"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -277,17 +304,17 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Net Monthly Flow</CardTitle>
+            <CardTitle>Aliran Bersih Bulanan</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                <Tooltip content={<CustomTooltip />} />
                 <Legend />
-                <Bar dataKey="net" fill="#3b82f6" name="Net" />
+                <Bar dataKey="net" fill="#3b82f6" name="Bersih" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -297,11 +324,11 @@ export default function AnalyticsPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Expenses by Category</CardTitle>
+            <CardTitle>Pengeluaran per Kategori</CardTitle>
           </CardHeader>
           <CardContent>
             {categoryData.expense.length === 0 ? (
-              <p className="text-slate-600 text-center py-12">No expense data available</p>
+              <p className="text-slate-600 text-center py-12">Tidak ada data pengeluaran</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -321,7 +348,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip formatter={(value: number) => formatRupiah(value)} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -330,11 +357,11 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Income by Category</CardTitle>
+            <CardTitle>Pemasukan per Kategori</CardTitle>
           </CardHeader>
           <CardContent>
             {categoryData.income.length === 0 ? (
-              <p className="text-slate-600 text-center py-12">No income data available</p>
+              <p className="text-slate-600 text-center py-12">Tidak ada data pemasukan</p>
             ) : (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
@@ -354,7 +381,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip />
+                  <Tooltip formatter={(value: number) => formatRupiah(value)} />
                 </PieChart>
               </ResponsiveContainer>
             )}

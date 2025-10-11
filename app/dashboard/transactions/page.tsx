@@ -26,6 +26,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, ArrowUpRight, ArrowDownRight, Trash2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 
+// Fungsi untuk format Rupiah
+const formatRupiah = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 export default function TransactionsPage() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -62,7 +72,7 @@ export default function TransactionsPage() {
       setTransactions(data || []);
     } catch (error) {
       console.error('Error loading transactions:', error);
-      toast.error('Failed to load transactions');
+      toast.error('Gagal memuat transaksi');
     } finally {
       setLoading(false);
     }
@@ -105,14 +115,14 @@ export default function TransactionsPage() {
           .eq('id', editingTransaction.id);
 
         if (error) throw error;
-        toast.success('Transaction updated successfully');
+        toast.success('Transaksi berhasil diperbarui');
       } else {
         const { error } = await supabase
           .from('transactions')
           .insert([transactionData]);
 
         if (error) throw error;
-        toast.success('Transaction added successfully');
+        toast.success('Transaksi berhasil ditambahkan');
       }
 
       setDialogOpen(false);
@@ -120,12 +130,12 @@ export default function TransactionsPage() {
       loadTransactions();
     } catch (error) {
       console.error('Error saving transaction:', error);
-      toast.error('Failed to save transaction');
+      toast.error('Gagal menyimpan transaksi');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) return;
+    if (!confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) return;
 
     try {
       const { error } = await supabase
@@ -134,11 +144,11 @@ export default function TransactionsPage() {
         .eq('id', id);
 
       if (error) throw error;
-      toast.success('Transaction deleted');
+      toast.success('Transaksi berhasil dihapus');
       loadTransactions();
     } catch (error) {
       console.error('Error deleting transaction:', error);
-      toast.error('Failed to delete transaction');
+      toast.error('Gagal menghapus transaksi');
     }
   };
 
@@ -179,8 +189,8 @@ export default function TransactionsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Transactions</h1>
-          <p className="text-slate-600 mt-1">Manage your income and expenses</p>
+          <h1 className="text-3xl font-bold text-slate-900">Transaksi</h1>
+          <p className="text-slate-600 mt-1">Kelola pemasukan dan pengeluaran Anda</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
@@ -189,46 +199,46 @@ export default function TransactionsPage() {
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              Add Transaction
+              Tambah Transaksi
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
-                {editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}
+                {editingTransaction ? 'Edit Transaksi' : 'Tambah Transaksi Baru'}
               </DialogTitle>
               <DialogDescription>
                 {editingTransaction
-                  ? 'Update the transaction details below'
-                  : 'Enter the transaction details below'}
+                  ? 'Perbarui detail transaksi di bawah ini'
+                  : 'Masukkan detail transaksi di bawah ini'}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
+                <Label htmlFor="title">Judul</Label>
                 <Input
                   id="title"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Grocery shopping"
+                  placeholder="contoh: Belanja bulanan"
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Amount</Label>
+                  <Label htmlFor="amount">Jumlah</Label>
                   <Input
                     id="amount"
                     type="number"
-                    step="0.01"
+                    step="1"
                     value={formData.amount}
                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    placeholder="0.00"
+                    placeholder="0"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
+                  <Label htmlFor="type">Tipe</Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value: 'income' | 'expense') =>
@@ -239,15 +249,15 @@ export default function TransactionsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="expense">Expense</SelectItem>
-                      <SelectItem value="income">Income</SelectItem>
+                      <SelectItem value="expense">Pengeluaran</SelectItem>
+                      <SelectItem value="income">Pemasukan</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
+                  <Label htmlFor="date">Tanggal</Label>
                   <Input
                     id="date"
                     type="date"
@@ -257,7 +267,7 @@ export default function TransactionsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
+                  <Label htmlFor="category">Kategori</Label>
                   <Select
                     value={formData.category_id}
                     onValueChange={(value) =>
@@ -265,7 +275,7 @@ export default function TransactionsPage() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
+                      <SelectValue placeholder="Pilih kategori" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories
@@ -280,17 +290,17 @@ export default function TransactionsPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="note">Note (optional)</Label>
+                <Label htmlFor="note">Catatan (opsional)</Label>
                 <Textarea
                   id="note"
                   value={formData.note}
                   onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  placeholder="Add any additional details..."
+                  placeholder="Tambahkan detail tambahan..."
                 />
               </div>
               <div className="flex gap-3 pt-4">
                 <Button type="submit" className="flex-1">
-                  {editingTransaction ? 'Update' : 'Add'} Transaction
+                  {editingTransaction ? 'Perbarui' : 'Tambah'} Transaksi
                 </Button>
                 <Button
                   type="button"
@@ -300,7 +310,7 @@ export default function TransactionsPage() {
                     resetForm();
                   }}
                 >
-                  Cancel
+                  Batal
                 </Button>
               </div>
             </form>
@@ -310,12 +320,12 @@ export default function TransactionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Transactions</CardTitle>
+          <CardTitle>Semua Transaksi</CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
             <p className="text-slate-600 text-center py-8">
-              No transactions yet. Add your first transaction!
+              Belum ada transaksi. Tambahkan transaksi pertama Anda!
             </p>
           ) : (
             <div className="space-y-3">
@@ -326,11 +336,10 @@ export default function TransactionsPage() {
                 >
                   <div className="flex items-center gap-4">
                     <div
-                      className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                        transaction.type === 'income'
+                      className={`h-12 w-12 rounded-full flex items-center justify-center ${transaction.type === 'income'
                           ? 'bg-green-100'
                           : 'bg-red-100'
-                      }`}
+                        }`}
                     >
                       {transaction.type === 'income' ? (
                         <ArrowUpRight className="h-6 w-6 text-green-600" />
@@ -343,28 +352,32 @@ export default function TransactionsPage() {
                         {transaction.title}
                       </p>
                       <div className="flex items-center gap-3 text-sm text-slate-600">
-                        <span>{new Date(transaction.date).toLocaleDateString()}</span>
+                        <span>
+                          {new Date(transaction.date).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric'
+                          })}
+                        </span>
                         {transaction.category && (
                           <>
                             <span>•</span>
                             <span>{transaction.category.name}</span>
                           </>
                         )}
-                        <span>•</span>
                         <span className="capitalize">{transaction.source}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <div
-                      className={`text-xl font-bold ${
-                        transaction.type === 'income'
+                      className={`text-xl font-bold ${transaction.type === 'income'
                           ? 'text-green-600'
                           : 'text-red-600'
-                      }`}
+                        }`}
                     >
-                      {transaction.type === 'income' ? '+' : '-'}$
-                      {Number(transaction.amount).toFixed(2)}
+                      {transaction.type === 'income' ? '+' : '-'}
+                      {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
                     </div>
                     <div className="flex gap-2">
                       <Button

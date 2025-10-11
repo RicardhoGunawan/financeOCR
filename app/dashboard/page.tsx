@@ -6,6 +6,16 @@ import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp } from 'lucide-react';
 
+// Fungsi untuk format Rupiah
+const formatRupiah = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
@@ -72,59 +82,59 @@ export default function DashboardPage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">Dashboard Overview</h1>
-        <p className="text-slate-600 mt-1">Welcome back! Here's your financial summary.</p>
+        <h1 className="text-3xl font-bold text-slate-900">Ringkasan Dashboard</h1>
+        <p className="text-slate-600 mt-1">Selamat datang kembali! Berikut ringkasan keuangan Anda.</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Saldo</CardTitle>
             <Wallet className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${stats.balance.toFixed(2)}
+              {formatRupiah(stats.balance)}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Current balance
+              Saldo saat ini
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Income</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Pemasukan</CardTitle>
             <ArrowUpRight className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              ${stats.totalIncome.toFixed(2)}
+              {formatRupiah(stats.totalIncome)}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              All time income
+              Pemasukan keseluruhan
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Pengeluaran</CardTitle>
             <ArrowDownRight className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">
-              ${stats.totalExpense.toFixed(2)}
+              {formatRupiah(stats.totalExpense)}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              All time expenses
+              Pengeluaran keseluruhan
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transactions</CardTitle>
+            <CardTitle className="text-sm font-medium">Transaksi</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
@@ -132,7 +142,7 @@ export default function DashboardPage() {
               {stats.transactionCount}
             </div>
             <p className="text-xs text-slate-600 mt-1">
-              Total transactions
+              Total transaksi
             </p>
           </CardContent>
         </Card>
@@ -140,12 +150,12 @@ export default function DashboardPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
+          <CardTitle>Transaksi Terbaru</CardTitle>
         </CardHeader>
         <CardContent>
           {recentTransactions.length === 0 ? (
             <p className="text-slate-600 text-center py-8">
-              No transactions yet. Start by adding one or uploading a receipt!
+              Belum ada transaksi. Mulai dengan menambahkan transaksi atau mengunggah struk!
             </p>
           ) : (
             <div className="space-y-4">
@@ -173,7 +183,11 @@ export default function DashboardPage() {
                         {transaction.title}
                       </p>
                       <p className="text-sm text-slate-600">
-                        {new Date(transaction.date).toLocaleDateString()}
+                        {new Date(transaction.date).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric'
+                        })}
                       </p>
                     </div>
                   </div>
@@ -184,8 +198,8 @@ export default function DashboardPage() {
                         : 'text-red-600'
                     }`}
                   >
-                    {transaction.type === 'income' ? '+' : '-'}$
-                    {Number(transaction.amount).toFixed(2)}
+                    {transaction.type === 'income' ? '+' : '-'}
+                    {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
                   </div>
                 </div>
               ))}
