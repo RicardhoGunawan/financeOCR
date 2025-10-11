@@ -69,7 +69,6 @@ export default function OcrPage() {
       setOcrResult(null);
     }
   };
-
   const processOcr = async () => {
     if (!file) {
       toast.error('Please select a file first');
@@ -87,6 +86,13 @@ export default function OcrPage() {
       });
 
       const result = await response.json();
+
+      // ✅ tampilkan log dari server di console browser
+      if (result.debugLogs) {
+        console.group("🧩 OCR Debug Logs");
+        result.debugLogs.forEach((log: string) => console.log(log));
+        console.groupEnd();
+      }
 
       if (!response.ok) {
         throw new Error(result.error || 'Failed to process image');
@@ -113,6 +119,7 @@ export default function OcrPage() {
       setProcessing(false);
     }
   };
+
 
   const saveAsTransaction = async () => {
     if (!ocrResult) return;
