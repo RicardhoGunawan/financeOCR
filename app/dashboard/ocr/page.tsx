@@ -35,17 +35,16 @@ export default function OcrPage() {
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [showCamera, setShowCamera] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (user) {
       loadCategories();
     }
 
-    // Cleanup: stop camera on unmount
     return () => {
       stopCamera();
     };
@@ -66,74 +65,19 @@ export default function OcrPage() {
     }
   };
 
-  const startCamera = async () => {
-    try {
-      // Check if mediaDevices is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        console.warn('mediaDevices not supported');
-        toast.error('Camera is not supported on your device');
-        return;
-      }
-
-      console.log('Requesting camera access...');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-      });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          console.log('Video metadata loaded');
-          videoRef.current?.play();
-        };
-        setShowCamera(true);
-        console.log('Camera started successfully');
-      }
-    } catch (error: any) {
-      console.error('Error accessing camera:', error);
-      if (error.name === 'NotAllowedError') {
-        toast.error('Camera permission denied. Please allow camera access.');
-      } else if (error.name === 'NotFoundError') {
-        toast.error('No camera found on this device');
-      } else if (error.name === 'NotReadableError') {
-        toast.error('Camera is already in use by another application');
-      } else {
-        toast.error('Failed to access camera: ' + error.message);
-      }
-    }
-  };
-
   const stopCamera = () => {
     if (videoRef.current && videoRef.current.srcObject) {
       const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
       tracks.forEach((track) => track.stop());
-      setShowCamera(false);
     }
   };
 
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const context = canvasRef.current.getContext('2d');
-      if (context) {
-        canvasRef.current.width = videoRef.current.videoWidth;
-        canvasRef.current.height = videoRef.current.videoHeight;
-        context.drawImage(videoRef.current, 0, 0);
-        
-        canvasRef.current.toBlob((blob) => {
-          if (blob) {
-            const file = new File([blob], 'receipt_photo.jpg', { type: 'image/jpeg' });
-            setFile(file);
-            setPreview(canvasRef.current!.toDataURL());
-            stopCamera();
-            setOcrResult(null);
-          }
-        }, 'image/jpeg', 0.9);
-      }
-    }
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleCameraClick = () => {
+    cameraInputRef.current?.click();
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -231,6 +175,27 @@ export default function OcrPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+      {/* Hidden file inputs */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+        aria-label="Upload file"
+      />
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleFileChange}
+        className="hidden"
+        aria-label="Camera capture"
+      />
+      <video ref={videoRef} className="hidden" />
+      <canvas ref={canvasRef} className="hidden" />
+
       {/* Header */}
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">OCR Document Upload</h1>
@@ -247,133 +212,62 @@ export default function OcrPage() {
             <CardTitle className="text-lg sm:text-xl">Upload Document</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!showCamera ? (
-              <>
-                {/* Upload Section */}
-                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 sm:p-8 text-center hover:border-emerald-500 transition-colors">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    id="file-upload"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <input
-                    type="file"
-                    id="file-upload-camera"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <Upload className="h-10 w-10 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
-                    <p className="text-sm font-medium text-slate-900 mb-1">
-                      Click to upload or drag and drop
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      PNG, JPG, JPEG up to 10MB
-                    </p>
-                  </label>
-                </div>
+            {/* Upload and Camera Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={handleUploadClick}
+                className="w-full"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Upload File
+              </Button>
+              <Button
+                onClick={handleCameraClick}
+                variant="outline"
+                className="w-full"
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                Open Camera
+              </Button>
+            </div>
 
-                {/* Camera Button */}
-                <Button
-                  onClick={() => {
-                    // Check HTTPS requirement
-                    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
-                      toast.error('Camera requires HTTPS connection');
-                      return;
-                    }
-
-                    if (navigator.mediaDevices) {
-                      startCamera();
-                    } else {
-                      // Fallback: open file input with camera capture
-                      const cameraInput = document.getElementById('file-upload-camera') as HTMLInputElement;
-                      if (cameraInput) {
-                        cameraInput.click();
-                      }
-                    }
-                  }}
-                  variant="outline"
-                  className="w-full"
-                >
-                  <Camera className="mr-2 h-4 w-4" />
-                  Open Camera
-                </Button>
-
-                {preview && (
-                  <div className="space-y-4">
-                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                      <img
-                        src={preview}
-                        alt="Preview"
-                        className="w-full h-auto max-h-64 sm:max-h-96 object-contain"
-                      />
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Button
-                        onClick={processOcr}
-                        disabled={processing}
-                        className="flex-1"
-                      >
-                        {processing ? (
-                          <>
-                            <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="mr-2 h-4 w-4" />
-                            Extract Data
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setFile(null);
-                          setPreview(null);
-                          setOcrResult(null);
-                        }}
-                        className="flex-1 sm:flex-initial"
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </>
-            ) : (
-              /* Camera View */
+            {preview && (
               <div className="space-y-4">
-                <div className="relative bg-slate-900 rounded-lg overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-64 sm:h-96 object-cover"
+                <div className="border border-slate-200 rounded-lg overflow-hidden">
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="w-full h-auto max-h-64 sm:max-h-96 object-contain"
                   />
-                  <canvas ref={canvasRef} className="hidden" />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
-                    onClick={capturePhoto}
+                    onClick={processOcr}
+                    disabled={processing}
                     className="flex-1"
                   >
-                    <Camera className="mr-2 h-4 w-4" />
-                    Capture Photo
+                    {processing ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Extract Data
+                      </>
+                    )}
                   </Button>
                   <Button
                     variant="outline"
-                    onClick={stopCamera}
+                    onClick={() => {
+                      setFile(null);
+                      setPreview(null);
+                      setOcrResult(null);
+                    }}
                     className="flex-1 sm:flex-initial"
                   >
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel
+                    Clear
                   </Button>
                 </div>
               </div>
