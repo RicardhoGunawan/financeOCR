@@ -70,20 +70,28 @@ export default function OcrPage() {
     try {
       // Check if mediaDevices is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn('mediaDevices not supported');
         toast.error('Camera is not supported on your device');
         return;
       }
 
+      console.log('Requesting camera access...');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          facingMode: 'environment',
+          facingMode: { ideal: 'environment' },
           width: { ideal: 1280 },
           height: { ideal: 720 }
         },
       });
+      
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Video metadata loaded');
+          videoRef.current?.play();
+        };
         setShowCamera(true);
+        console.log('Camera started successfully');
       }
     } catch (error: any) {
       console.error('Error accessing camera:', error);
@@ -152,7 +160,7 @@ export default function OcrPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('https://finance-ocr-mocha.vercel.app/api/ocr', {
+      const response = await fetch('/api/ocr', {
         method: 'POST',
         body: formData,
       });
@@ -273,6 +281,12 @@ export default function OcrPage() {
                 {/* Camera Button */}
                 <Button
                   onClick={() => {
+                    // Check HTTPS requirement
+                    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+                      toast.error('Camera requires HTTPS connection');
+                      return;
+                    }
+
                     if (navigator.mediaDevices) {
                       startCamera();
                     } else {
@@ -340,6 +354,7 @@ export default function OcrPage() {
                     ref={videoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="w-full h-64 sm:h-96 object-cover"
                   />
                   <canvas ref={canvasRef} className="hidden" />
