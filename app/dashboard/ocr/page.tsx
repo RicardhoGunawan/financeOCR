@@ -80,7 +80,7 @@ export default function OcrPage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/ocr', {
+      const response = await fetch('https://finance-ocr-mocha.vercel.app/api/ocr', {
         method: 'POST',
         body: formData,
       });
