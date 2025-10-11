@@ -26,7 +26,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, ArrowUpRight, ArrowDownRight, Trash2, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 
-// Fungsi untuk format Rupiah
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -186,23 +185,26 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Transaksi</h1>
-          <p className="text-slate-600 mt-1">Kelola pemasukan dan pengeluaran Anda</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Transaksi</h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
+            Kelola pemasukan dan pengeluaran Anda
+          </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
-              Tambah Transaksi
+              <span className="sm:inline">Tambah Transaksi</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingTransaction ? 'Edit Transaksi' : 'Tambah Transaksi Baru'}
@@ -224,7 +226,7 @@ export default function TransactionsPage() {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="amount">Jumlah</Label>
                   <Input
@@ -255,7 +257,7 @@ export default function TransactionsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="date">Tanggal</Label>
                   <Input
@@ -298,7 +300,7 @@ export default function TransactionsPage() {
                   placeholder="Tambahkan detail tambahan..."
                 />
               </div>
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <Button type="submit" className="flex-1">
                   {editingTransaction ? 'Perbarui' : 'Tambah'} Transaksi
                 </Button>
@@ -309,6 +311,7 @@ export default function TransactionsPage() {
                     setDialogOpen(false);
                     resetForm();
                   }}
+                  className="flex-1 sm:flex-initial"
                 >
                   Batal
                 </Button>
@@ -318,13 +321,14 @@ export default function TransactionsPage() {
         </Dialog>
       </div>
 
+      {/* Transactions List */}
       <Card>
         <CardHeader>
-          <CardTitle>Semua Transaksi</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Semua Transaksi</CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
-            <p className="text-slate-600 text-center py-8">
+            <p className="text-slate-600 text-center py-8 text-sm sm:text-base">
               Belum ada transaksi. Tambahkan transaksi pertama Anda!
             </p>
           ) : (
@@ -332,67 +336,77 @@ export default function TransactionsPage() {
               {transactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between border border-slate-200 rounded-lg p-4 hover:border-slate-300 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-slate-200 rounded-lg p-3 sm:p-4 hover:border-slate-300 transition-colors gap-3"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                     <div
-                      className={`h-12 w-12 rounded-full flex items-center justify-center ${transaction.type === 'income'
+                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        transaction.type === 'income'
                           ? 'bg-green-100'
                           : 'bg-red-100'
-                        }`}
+                      }`}
                     >
                       {transaction.type === 'income' ? (
-                        <ArrowUpRight className="h-6 w-6 text-green-600" />
+                        <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                       ) : (
-                        <ArrowDownRight className="h-6 w-6 text-red-600" />
+                        <ArrowDownRight className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
                       )}
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-900">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">
                         {transaction.title}
                       </p>
-                      <div className="flex items-center gap-3 text-sm text-slate-600">
+                      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
                         <span>
                           {new Date(transaction.date).toLocaleDateString('id-ID', {
                             day: 'numeric',
-                            month: 'long',
+                            month: 'short',
                             year: 'numeric'
                           })}
                         </span>
                         {transaction.category && (
                           <>
-                            <span>•</span>
+                            <span className="hidden sm:inline">•</span>
                             <span>{transaction.category.name}</span>
                           </>
                         )}
+                        <span className="hidden sm:inline">•</span>
                         <span className="capitalize">{transaction.source}</span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
                     <div
-                      className={`text-xl font-bold ${transaction.type === 'income'
+                      className={`text-base sm:text-xl font-bold ${
+                        transaction.type === 'income'
                           ? 'text-green-600'
                           : 'text-red-600'
-                        }`}
+                      }`}
                     >
                       {transaction.type === 'income' ? '+' : '-'}
-                      {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
+                      <span className="hidden sm:inline">
+                        {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
+                      </span>
+                      <span className="sm:hidden">
+                        {(Number(transaction.amount) / 1000).toFixed(0)}k
+                      </span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 sm:h-10 sm:w-10"
                         onClick={() => openEditDialog(transaction)}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 sm:h-10 sm:w-10"
                         onClick={() => handleDelete(transaction.id)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                       </Button>
                     </div>
                   </div>

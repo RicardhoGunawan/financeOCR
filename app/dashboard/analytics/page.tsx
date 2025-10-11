@@ -42,7 +42,6 @@ type CategoryData = {
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-// Fungsi untuk format Rupiah
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
@@ -130,7 +129,7 @@ export default function AnalyticsPage() {
       .map(([month, data]) => ({
         month: new Date(month).toLocaleDateString('id-ID', {
           month: 'short',
-          year: 'numeric',
+          year: '2-digit',
         }),
         income: data.income,
         expense: data.expense,
@@ -179,14 +178,13 @@ export default function AnalyticsPage() {
     });
   };
 
-  // Custom Tooltip dengan format Rupiah
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
-          <p className="font-medium text-slate-900 mb-2">{label}</p>
+        <div className="bg-white p-2 sm:p-3 border border-slate-200 rounded-lg shadow-lg">
+          <p className="font-medium text-slate-900 mb-1 sm:mb-2 text-xs sm:text-sm">{label}</p>
           {payload.map((entry: any, index: number) => (
-            <p key={index} style={{ color: entry.color }} className="text-sm">
+            <p key={index} style={{ color: entry.color }} className="text-xs sm:text-sm">
               {entry.name}: {formatRupiah(entry.value)}
             </p>
           ))}
@@ -205,14 +203,17 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Analisis Keuangan</h1>
-          <p className="text-slate-600 mt-1">Visualisasi pola dan tren keuangan Anda</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Analisis Keuangan</h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
+            Visualisasi pola dan tren keuangan Anda
+          </p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -223,14 +224,15 @@ export default function AnalyticsPage() {
         </Select>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
+      {/* Summary Cards */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Rata-rata Pemasukan</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-xl sm:text-2xl font-bold text-green-600 truncate">
               {formatRupiah(summary.avgIncome)}
             </div>
             <p className="text-xs text-slate-600 mt-1">Per transaksi</p>
@@ -243,21 +245,21 @@ export default function AnalyticsPage() {
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+            <div className="text-xl sm:text-2xl font-bold text-red-600 truncate">
               {formatRupiah(summary.avgExpense)}
             </div>
             <p className="text-xs text-slate-600 mt-1">Per transaksi</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="sm:col-span-2 lg:col-span-1">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Aliran Bersih</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
+              className={`text-xl sm:text-2xl font-bold truncate ${
                 summary.totalIncome - summary.totalExpense >= 0
                   ? 'text-green-600'
                   : 'text-red-600'
@@ -270,19 +272,29 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2 mb-8">
+      {/* Charts */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 mb-6 sm:mb-8">
         <Card>
           <CardHeader>
-            <CardTitle>Pemasukan vs Pengeluaran Bulanan</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Pemasukan vs Pengeluaran Bulanan</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <LineChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis 
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 12 }}
+                />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Line
                   type="monotone"
                   dataKey="income"
@@ -304,16 +316,25 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Aliran Bersih Bulanan</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Aliran Bersih Bulanan</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 12 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis 
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 12 }}
+                />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="net" fill="#3b82f6" name="Bersih" />
               </BarChart>
             </ResponsiveContainer>
@@ -321,16 +342,17 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Pie Charts */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Pengeluaran per Kategori</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Pengeluaran per Kategori</CardTitle>
           </CardHeader>
           <CardContent>
             {categoryData.expense.length === 0 ? (
-              <p className="text-slate-600 text-center py-12">Tidak ada data pengeluaran</p>
+              <p className="text-slate-600 text-center py-12 text-sm">Tidak ada data pengeluaran</p>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
                     data={categoryData.expense}
@@ -340,7 +362,7 @@ export default function AnalyticsPage() {
                     label={({ name, percent }) =>
                       `${name}: ${(percent * 100).toFixed(0)}%`
                     }
-                    outerRadius={80}
+                    outerRadius={window.innerWidth < 640 ? 60 : 80}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -357,13 +379,13 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Pemasukan per Kategori</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Pemasukan per Kategori</CardTitle>
           </CardHeader>
           <CardContent>
             {categoryData.income.length === 0 ? (
-              <p className="text-slate-600 text-center py-12">Tidak ada data pemasukan</p>
+              <p className="text-slate-600 text-center py-12 text-sm">Tidak ada data pemasukan</p>
             ) : (
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie
                     data={categoryData.income}
@@ -373,7 +395,7 @@ export default function AnalyticsPage() {
                     label={({ name, percent }) =>
                       `${name}: ${(percent * 100).toFixed(0)}%`
                     }
-                    outerRadius={80}
+                    outerRadius={window.innerWidth < 640 ? 60 : 80}
                     fill="#8884d8"
                     dataKey="value"
                   >

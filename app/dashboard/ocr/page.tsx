@@ -69,6 +69,7 @@ export default function OcrPage() {
       setOcrResult(null);
     }
   };
+
   const processOcr = async () => {
     if (!file) {
       toast.error('Please select a file first');
@@ -87,7 +88,6 @@ export default function OcrPage() {
 
       const result = await response.json();
 
-      // ✅ tampilkan log dari server di console browser
       if (result.debugLogs) {
         console.group("🧩 OCR Debug Logs");
         result.debugLogs.forEach((log: string) => console.log(log));
@@ -120,7 +120,6 @@ export default function OcrPage() {
     }
   };
 
-
   const saveAsTransaction = async () => {
     if (!ocrResult) return;
 
@@ -152,21 +151,24 @@ export default function OcrPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900">OCR Document Upload</h1>
-        <p className="text-slate-600 mt-1">
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">OCR Document Upload</h1>
+        <p className="text-sm sm:text-base text-slate-600 mt-1">
           Upload receipts and invoices to automatically extract transaction details
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Main Content */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        {/* Upload Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Upload Document</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Upload Document</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-emerald-500 transition-colors">
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 sm:p-8 text-center hover:border-emerald-500 transition-colors">
               <input
                 type="file"
                 id="file-upload"
@@ -175,7 +177,7 @@ export default function OcrPage() {
                 className="hidden"
               />
               <label htmlFor="file-upload" className="cursor-pointer">
-                <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                <Upload className="h-10 w-10 sm:h-12 sm:w-12 text-slate-400 mx-auto mb-3 sm:mb-4" />
                 <p className="text-sm font-medium text-slate-900 mb-1">
                   Click to upload or drag and drop
                 </p>
@@ -191,10 +193,10 @@ export default function OcrPage() {
                   <img
                     src={preview}
                     alt="Preview"
-                    className="w-full h-auto max-h-96 object-contain"
+                    className="w-full h-auto max-h-64 sm:max-h-96 object-contain"
                   />
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     onClick={processOcr}
                     disabled={processing}
@@ -219,6 +221,7 @@ export default function OcrPage() {
                       setPreview(null);
                       setOcrResult(null);
                     }}
+                    className="flex-1 sm:flex-initial"
                   >
                     Clear
                   </Button>
@@ -228,23 +231,24 @@ export default function OcrPage() {
           </CardContent>
         </Card>
 
+        {/* Results Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Extracted Data</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Extracted Data</CardTitle>
           </CardHeader>
           <CardContent>
             {!ocrResult ? (
-              <div className="text-center py-12">
-                <AlertCircle className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-600">
+              <div className="text-center py-8 sm:py-12">
+                <AlertCircle className="h-10 w-10 sm:h-12 sm:w-12 text-slate-300 mx-auto mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base text-slate-600">
                   Upload and process a document to see extracted data
                 </p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div className="flex-1">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-green-900">
                       Document processed successfully
                     </p>
@@ -266,7 +270,7 @@ export default function OcrPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-slate-600">Amount</Label>
                       <Input
@@ -301,7 +305,7 @@ export default function OcrPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <Label className="text-xs text-slate-600">Date</Label>
                       <Input

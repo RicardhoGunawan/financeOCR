@@ -174,11 +174,12 @@ export default function CategoriesPage() {
   const expenseCategories = categories.filter((c) => c.type === 'expense');
 
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Categories</h1>
-          <p className="text-slate-600 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Categories</h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
             Organize your transactions with custom categories
           </p>
         </div>
@@ -190,7 +191,7 @@ export default function CategoriesPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button className="gap-2">
+            <Button className="gap-2 w-full sm:w-auto">
               <Plus className="h-4 w-4" />
               Add Category
             </Button>
@@ -234,7 +235,7 @@ export default function CategoriesPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
                 <Button type="submit" className="flex-1">
                   {editingCategory ? 'Update' : 'Add'} Category
                 </Button>
@@ -245,6 +246,7 @@ export default function CategoriesPage() {
                     setDialogOpen(false);
                     resetForm();
                   }}
+                  className="flex-1 sm:flex-initial"
                 >
                   Cancel
                 </Button>
@@ -254,17 +256,19 @@ export default function CategoriesPage() {
         </Dialog>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Categories Grid */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+        {/* Expense Categories */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <TrendingDown className="h-5 w-5 text-red-600" />
               Expense Categories
             </CardTitle>
           </CardHeader>
           <CardContent>
             {expenseCategories.length === 0 ? (
-              <p className="text-slate-600 text-center py-8">
+              <p className="text-slate-600 text-center py-8 text-sm">
                 No expense categories yet. Add your first one!
               </p>
             ) : (
@@ -272,14 +276,16 @@ export default function CategoriesPage() {
                 {expenseCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="flex items-center justify-between border border-slate-200 rounded-lg p-3 hover:border-red-300 transition-colors"
+                    className="flex items-center justify-between border border-slate-200 rounded-lg p-3 hover:border-red-300 transition-colors gap-2"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                        <TrendingDown className="h-5 w-5 text-red-600" />
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                        <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
                       </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{category.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900 text-sm sm:text-base truncate">
+                          {category.name}
+                        </p>
                         <Badge
                           variant="outline"
                           className="text-xs text-red-600 border-red-200"
@@ -288,20 +294,22 @@ export default function CategoriesPage() {
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
                         onClick={() => openEditDialog(category)}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
                         onClick={() => handleDelete(category.id)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                       </Button>
                     </div>
                   </div>
@@ -311,16 +319,17 @@ export default function CategoriesPage() {
           </CardContent>
         </Card>
 
+        {/* Income Categories */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <TrendingUp className="h-5 w-5 text-green-600" />
               Income Categories
             </CardTitle>
           </CardHeader>
           <CardContent>
             {incomeCategories.length === 0 ? (
-              <p className="text-slate-600 text-center py-8">
+              <p className="text-slate-600 text-center py-8 text-sm">
                 No income categories yet. Add your first one!
               </p>
             ) : (
@@ -328,14 +337,16 @@ export default function CategoriesPage() {
                 {incomeCategories.map((category) => (
                   <div
                     key={category.id}
-                    className="flex items-center justify-between border border-slate-200 rounded-lg p-3 hover:border-green-300 transition-colors"
+                    className="flex items-center justify-between border border-slate-200 rounded-lg p-3 hover:border-green-300 transition-colors gap-2"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                        <TrendingUp className="h-5 w-5 text-green-600" />
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                        <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                       </div>
-                      <div>
-                        <p className="font-medium text-slate-900">{category.name}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-slate-900 text-sm sm:text-base truncate">
+                          {category.name}
+                        </p>
                         <Badge
                           variant="outline"
                           className="text-xs text-green-600 border-green-200"
@@ -344,20 +355,22 @@ export default function CategoriesPage() {
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
                         onClick={() => openEditDialog(category)}
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
                         onClick={() => handleDelete(category.id)}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                       </Button>
                     </div>
                   </div>
