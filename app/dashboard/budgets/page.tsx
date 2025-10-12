@@ -249,101 +249,104 @@ export default function BudgetsPage() {
               Add Budget
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-[500px] p-0 flex flex-col max-h-[95vh]">
+            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingBudget ? 'Edit Budget' : 'Add New Budget'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm">
                 {editingBudget
                   ? 'Update the budget for this category.'
                   : 'Create a new budget to control your expenses.'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={formData.category_id}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, category_id: value })
-                  }
-                  disabled={!!editingBudget}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="amount">Budget Amount</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="1000"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                  placeholder="1000000"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="month">Month</Label>
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="category" className="text-xs sm:text-sm">Category</Label>
                   <Select
-                    value={formData.month}
+                    value={formData.category_id}
                     onValueChange={(value) =>
-                      setFormData({ ...formData, month: value })
+                      setFormData({ ...formData, category_id: value })
                     }
+                    disabled={!!editingBudget}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
+                    <SelectTrigger className="text-sm h-9 sm:h-10">
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MONTHS.map((month, index) => (
-                        <SelectItem key={index} value={(index + 1).toString()}>
-                          {month}
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id.toString()}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="year">Year</Label>
-                  <Select
-                    value={formData.year}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, year: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(
-                        (year) => (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="amount" className="text-xs sm:text-sm">Budget Amount</Label>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="1000"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                    placeholder="1000000"
+                    required
+                    className="text-sm h-9 sm:h-10"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="month" className="text-xs sm:text-sm">Month</Label>
+                    <Select
+                      value={formData.month}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, month: value })
+                      }
+                    >
+                      <SelectTrigger className="text-sm h-9 sm:h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MONTHS.map((month, index) => (
+                          <SelectItem key={index} value={(index + 1).toString()}>
+                            {month}
                           </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="year" className="text-xs sm:text-sm">Year</Label>
+                    <Select
+                      value={formData.year}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, year: value })
+                      }
+                    >
+                      <SelectTrigger className="text-sm h-9 sm:h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(
+                          (year) => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <Button type="submit" className="flex-1">
+              <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50">
+                <Button type="submit" className="w-full h-9 sm:h-10 text-sm">
                   {editingBudget ? 'Update' : 'Add'} Budget
                 </Button>
                 <Button
@@ -353,7 +356,7 @@ export default function BudgetsPage() {
                     setDialogOpen(false);
                     resetForm();
                   }}
-                  className="flex-1 sm:flex-initial"
+                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                 >
                   Cancel
                 </Button>
@@ -373,7 +376,7 @@ export default function BudgetsPage() {
                 value={selectedMonth.toString()}
                 onValueChange={(value) => setSelectedMonth(parseInt(value))}
               >
-                <SelectTrigger className="w-full sm:w-40">
+                <SelectTrigger className="w-full sm:w-40 text-sm h-9 sm:h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -389,7 +392,7 @@ export default function BudgetsPage() {
                 value={selectedYear.toString()}
                 onValueChange={(value) => setSelectedYear(parseInt(value))}
               >
-                <SelectTrigger className="w-full sm:w-32">
+                <SelectTrigger className="w-full sm:w-32 text-sm h-9 sm:h-10">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -456,10 +459,10 @@ export default function BudgetsPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <TrendingUp className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-600">
+              <p className="text-slate-600 text-sm sm:text-base">
                 No budgets found for {MONTHS[selectedMonth - 1]} {selectedYear}.
               </p>
-              <p className="text-sm text-slate-500 mt-2">
+              <p className="text-xs sm:text-sm text-slate-500 mt-2">
                 Add your first budget to start managing your expenses!
               </p>
             </CardContent>
@@ -468,10 +471,10 @@ export default function BudgetsPage() {
           budgets.map((budget) => (
             <Card key={budget.id} className="hover:shadow-md transition-shadow">
               <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                      className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                         budget.percentage >= 100
                           ? 'bg-red-100'
                           : budget.percentage >= 80
@@ -485,20 +488,20 @@ export default function BudgetsPage() {
                         <CheckCircle2 className="h-5 w-5 text-green-600" />
                       )}
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-slate-900 text-sm sm:text-base truncate">
                         {budget.category?.name || 'Unknown'}
                       </h3>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-xs sm:text-sm text-slate-600">
                         Budget: {formatRupiah(budget.amount)}
                       </p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1 sm:gap-2 flex-shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 sm:h-9 sm:w-9"
                       onClick={() => openEditDialog(budget)}
                     >
                       <Edit className="h-4 w-4" />
@@ -506,7 +509,7 @@ export default function BudgetsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 sm:h-9 sm:w-9"
                       onClick={() => handleDelete(budget.id)}
                     >
                       <Trash2 className="h-4 w-4 text-red-600" />
@@ -515,7 +518,7 @@ export default function BudgetsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
+                  <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-slate-600">
                       Spent: {formatRupiah(budget.spent)}
                     </span>

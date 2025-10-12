@@ -196,47 +196,51 @@ export default function CategoriesPage() {
               Add Category
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] p-0 flex flex-col max-h-[95vh]">
+            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingCategory ? 'Edit Category' : 'Add New Category'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm">
                 {editingCategory
                   ? 'Update the category details below'
                   : 'Create a new category for organizing transactions'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Category Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., Groceries"
-                  required
-                />
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="name" className="text-xs sm:text-sm">Category Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g., Groceries"
+                    required
+                    className="text-sm h-9 sm:h-10"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="type" className="text-xs sm:text-sm">Type</Label>
+                  <Select
+                    value={formData.type}
+                    onValueChange={(value: 'income' | 'expense') =>
+                      setFormData({ ...formData, type: value })
+                    }
+                  >
+                    <SelectTrigger className="text-sm h-9 sm:h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="expense">Expense</SelectItem>
+                      <SelectItem value="income">Income</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={(value: 'income' | 'expense') =>
-                    setFormData({ ...formData, type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expense">Expense</SelectItem>
-                    <SelectItem value="income">Income</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <Button type="submit" className="flex-1">
+
+              <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50">
+                <Button type="submit" className="w-full h-9 sm:h-10 text-sm">
                   {editingCategory ? 'Update' : 'Add'} Category
                 </Button>
                 <Button
@@ -246,7 +250,7 @@ export default function CategoriesPage() {
                     setDialogOpen(false);
                     resetForm();
                   }}
-                  className="flex-1 sm:flex-initial"
+                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                 >
                   Cancel
                 </Button>
