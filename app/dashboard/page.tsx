@@ -1,12 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase, Transaction, BudgetWithSpent } from '@/lib/supabase';
+import { supabase, Transaction, BudgetWithSpent, Insight } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  Wallet, 
+  TrendingUp, 
+  AlertTriangle,
+  Lightbulb,
+  Sparkles,
+  ChevronRight
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 const formatRupiah = (amount: number) => {
@@ -16,6 +26,19 @@ const formatRupiah = (amount: number) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+};
+
+const getSeverityColor = (severity: string) => {
+  switch (severity) {
+    case 'critical':
+      return 'border-red-200 bg-red-50';
+    case 'warning':
+      return 'border-orange-200 bg-orange-50';
+    case 'success':
+      return 'border-green-200 bg-green-50';
+    default:
+      return 'border-blue-200 bg-blue-50';
+  }
 };
 
 export default function DashboardPage() {
@@ -29,12 +52,14 @@ export default function DashboardPage() {
   });
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetWithSpent[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
       loadDashboardData();
       loadBudgetAlerts();
+      loadInsights();
     }
   }, [user]);
 
@@ -82,7 +107,6 @@ export default function DashboardPage() {
       const currentMonth = currentDate.getMonth() + 1;
       const currentYear = currentDate.getFullYear();
 
-      // Load budgets for current month
       const { data: budgetsData } = await supabase
         .from('budgets')
         .select('*, category:categories(*)')
@@ -92,7 +116,6 @@ export default function DashboardPage() {
 
       if (!budgetsData || budgetsData.length === 0) return;
 
-      // Calculate spent for each budget
       const startDate = new Date(currentYear, currentMonth - 1, 1);
       const endDate = new Date(currentYear, currentMonth, 0);
 
@@ -119,11 +142,27 @@ export default function DashboardPage() {
         })
       );
 
-      // Filter budgets that are over 80% or exceeded
       const alerts = budgetsWithSpent.filter(b => b.percentage >= 80);
       setBudgetAlerts(alerts);
     } catch (error) {
       console.error('Error loading budget alerts:', error);
+    }
+  };
+
+  const loadInsights = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('insights')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      setInsights(data || []);
+    } catch (error) {
+      console.error('Error loading insights:', error);
     }
   };
 
@@ -141,9 +180,56 @@ export default function DashboardPage() {
       <div className="mb-6 sm:mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Dashboard Overview</h1>
         <p className="text-sm sm:text-base text-slate-600 mt-1">
-          Welcome back! Here's your financial summary.
+          Welcome back! Here's a summary of your finances.
         </p>
       </div>
+
+      {/* AI Insights Preview */}
+      {insights.length > 0 && (
+        <Card className="mb-6 border-emerald-200 bg-gradient-to-r from-emerald-50 to-blue-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-emerald-900 text-base sm:text-lg">
+                <Sparkles className="h-5 w-5" />
+                AI Insights for You
+                <Badge variant="default" className="bg-emerald-600 ml-2">
+                  {insights.length} New
+                </Badge>
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/dashboard/insights')}
+                className="text-emerald-700 hover:text-emerald-900"
+              >
+                View All
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {insights.slice(0, 3).map((insight) => (
+              <div 
+                key={insight.id} 
+                className={`rounded-lg p-3 border cursor-pointer hover:shadow-md transition-shadow ${getSeverityColor(insight.severity)}`}
+                onClick={() => router.push('/dashboard/insights')}
+              >
+                <div className="flex items-start gap-3">
+                  <Lightbulb className="h-5 w-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-slate-900 text-sm mb-1">
+                      {insight.title}
+                    </h3>
+                    <p className="text-xs text-slate-700 line-clamp-2">
+                      {insight.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Budget Alerts */}
       {budgetAlerts.length > 0 && (
@@ -151,7 +237,7 @@ export default function DashboardPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-orange-900 text-base sm:text-lg">
               <AlertTriangle className="h-5 w-5" />
-              Budget Warning
+              Budget Alerts
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -161,13 +247,14 @@ export default function DashboardPage() {
                   <span className="font-medium text-slate-900 text-sm sm:text-base">
                     {budget.category?.name}
                   </span>
-                  <span className={`text-sm font-semibold ${budget.percentage >= 100 ? 'text-red-600' : 'text-orange-600'
-                    }`}>
+                  <span className={`text-sm font-semibold ${
+                    budget.percentage >= 100 ? 'text-red-600' : 'text-orange-600'
+                  }`}>
                     {budget.percentage.toFixed(0)}%
                   </span>
                 </div>
-                <Progress
-                  value={Math.min(budget.percentage, 100)}
+                <Progress 
+                  value={Math.min(budget.percentage, 100)} 
                   className="h-2 mb-2"
                 />
                 <div className="flex justify-between text-xs text-slate-600">
@@ -180,14 +267,14 @@ export default function DashboardPage() {
                     </span>
                   ) : (
                     <span className="text-orange-600 flex-shrink-0">
-                      Approaching the limit
+                      Approaching limit
                     </span>
                   )}
                 </div>
               </div>
             ))}
-            <Button
-              variant="outline"
+            <Button 
+              variant="outline" 
               className="w-full mt-2"
               onClick={() => router.push('/dashboard/budgets')}
             >
@@ -227,27 +314,27 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Expenditure</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Expense</CardTitle>
             <ArrowDownRight className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-red-600 truncate">
               {formatRupiah(stats.totalExpense)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Total expenditure</p>
+            <p className="text-xs text-slate-600 mt-1">Total expenses</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Transaction</CardTitle>
+            <CardTitle className="text-sm font-medium">Transactions</CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold">
               {stats.transactionCount}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Total Transaction</p>
+            <p className="text-xs text-slate-600 mt-1">Total transactions</p>
           </CardContent>
         </Card>
       </div>
@@ -255,12 +342,12 @@ export default function DashboardPage() {
       {/* Recent Transactions */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl">Latest Transactions</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Recent Transactions</CardTitle>
         </CardHeader>
         <CardContent>
           {recentTransactions.length === 0 ? (
             <p className="text-slate-600 text-center py-8 text-sm sm:text-base">
-              There are no transactions yet. Start by adding a transaction or uploading a receipt! There are no transactions yet. Start by adding a transaction or uploading a receipt!
+              No transactions yet. Start by adding a transaction or uploading a receipt!
             </p>
           ) : (
             <div className="space-y-3 sm:space-y-4">
@@ -271,10 +358,11 @@ export default function DashboardPage() {
                 >
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                     <div
-                      className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${transaction.type === 'income'
-                        ? 'bg-green-100'
-                        : 'bg-red-100'
-                        }`}
+                      className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        transaction.type === 'income'
+                          ? 'bg-green-100'
+                          : 'bg-red-100'
+                      }`}
                     >
                       {transaction.type === 'income' ? (
                         <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
@@ -287,7 +375,7 @@ export default function DashboardPage() {
                         {transaction.title}
                       </p>
                       <p className="text-xs sm:text-sm text-slate-600">
-                        {new Date(transaction.date).toLocaleDateString('id-ID', {
+                        {new Date(transaction.date).toLocaleDateString('en-US', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric'
@@ -296,10 +384,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div
-                    className={`text-sm sm:text-lg font-semibold flex-shrink-0 ${transaction.type === 'income'
-                      ? 'text-green-600'
-                      : 'text-red-600'
-                      }`}
+                    className={`text-sm sm:text-lg font-semibold flex-shrink-0 ${
+                      transaction.type === 'income'
+                        ? 'text-green-600'
+                        : 'text-red-600'
+                    }`}
                   >
                     <span className="hidden sm:inline">
                       {transaction.type === 'income' ? '+' : '-'}

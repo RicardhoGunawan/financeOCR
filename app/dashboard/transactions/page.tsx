@@ -203,104 +203,114 @@ export default function TransactionsPage() {
               <span className="sm:inline">Add Transaction</span>
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
+          <DialogContent className="w-[95vw] max-w-md sm:max-w-[500px] p-0 flex flex-col max-h-[95vh]">
+            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
+              <DialogTitle className="text-lg sm:text-xl">
                 {editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-xs sm:text-sm">
                 {editingTransaction
                   ? 'Update the transaction details below'
                   : 'Enter the transaction details below'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="e.g., Monthly groceries"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="amount">Amount</Label>
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="title" className="text-xs sm:text-sm">Title</Label>
                   <Input
-                    id="amount"
-                    type="number"
-                    step="1"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    placeholder="0"
+                    id="title"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="e.g., Monthly groceries"
                     required
+                    className="text-sm h-9 sm:h-10"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="type">Type</Label>
-                  <Select
-                    value={formData.type}
-                    onValueChange={(value: 'income' | 'expense') =>
-                      setFormData({ ...formData, type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="expense">Expense</SelectItem>
-                      <SelectItem value="income">Income</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="amount" className="text-xs sm:text-sm">Amount</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="1"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      placeholder="0"
+                      required
+                      className="text-sm h-9 sm:h-10"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="type" className="text-xs sm:text-sm">Type</Label>
+                    <Select
+                      value={formData.type}
+                      onValueChange={(value: 'income' | 'expense') =>
+                        setFormData({ ...formData, type: value })
+                      }
+                    >
+                      <SelectTrigger className="text-sm h-9 sm:h-10">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="expense">Expense</SelectItem>
+                        <SelectItem value="income">Income</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    required
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="date" className="text-xs sm:text-sm">Date</Label>
+                    <Input
+                      id="date"
+                      type="date"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      required
+                      className="text-sm h-9 sm:h-10"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="category" className="text-xs sm:text-sm">Category</Label>
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category_id: value })
+                      }
+                    >
+                      <SelectTrigger className="text-sm h-9 sm:h-10">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories
+                          .filter((cat) => cat.type === formData.type)
+                          .map((category) => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="note" className="text-xs sm:text-sm">Note (optional)</Label>
+                  <Textarea
+                    id="note"
+                    value={formData.note}
+                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                    placeholder="Add additional details..."
+                    className="text-sm resize-none min-h-[80px] sm:min-h-[100px]"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="category">Category</Label>
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, category_id: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories
-                        .filter((cat) => cat.type === formData.type)
-                        .map((category) => (
-                          <SelectItem key={category.id} value={category.id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="note">Note (optional)</Label>
-                <Textarea
-                  id="note"
-                  value={formData.note}
-                  onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-                  placeholder="Add additional details..."
-                />
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                <Button type="submit" className="flex-1">
+
+              <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50">
+                <Button type="submit" className="w-full h-9 sm:h-10 text-sm">
                   {editingTransaction ? 'Update' : 'Add'} Transaction
                 </Button>
                 <Button
@@ -310,7 +320,7 @@ export default function TransactionsPage() {
                     setDialogOpen(false);
                     resetForm();
                   }}
-                  className="flex-1 sm:flex-initial"
+                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                 >
                   Cancel
                 </Button>

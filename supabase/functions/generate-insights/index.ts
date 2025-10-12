@@ -1,4 +1,5 @@
 // supabase/functions/generate-insights/index.ts
+// Complete version with CORS fix
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
@@ -7,36 +8,47 @@ const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-interface TransactionData {
-  user_id: string;
-  transactions: any[];
-  budgets: any[];
-  categories: any[];
-}
+// CORS headers - IMPORTANT for frontend calls
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   try {
-    // Initialize Supabase client with service role
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Get all users who have transactions
-    const { data: users, error: usersError } = await supabase
-      .from("transactions")
-      .select("user_id")
-      .order("created_at", { ascending: false });
+    // Get request body - support specific user or all users
+    const body = await req.json().catch(() => ({}));
+    const specificUserId = body.user_id;
 
-    if (usersError) throw usersError;
+    let userIds: string[] = [];
 
-    // Get unique user IDs
-    const uniqueUserIds = [...new Set(users?.map((u) => u.user_id) || [])];
+    if (specificUserId) {
+      // Manual trigger from frontend - process specific user
+      userIds = [specificUserId];
+      console.log(`Processing insights for user: ${specificUserId}`);
+    } else {
+      // Cron job - process all users
+      const { data: users, error: usersError } = await supabase
+        .from("transactions")
+        .select("user_id")
+        .order("created_at", { ascending: false });
 
-    console.log(`Processing insights for ${uniqueUserIds.length} users`);
+      if (usersError) throw usersError;
+      userIds = [...new Set(users?.map((u) => u.user_id) || [])];
+      console.log(`Processing insights for ${userIds.length} users`);
+    }
 
     let successCount = 0;
     let errorCount = 0;
 
-    // Process each user
-    for (const userId of uniqueUserIds) {
+    for (const userId of userIds) {
       try {
         await generateInsightsForUser(userId, supabase);
         successCount++;
@@ -53,29 +65,38 @@ serve(async (req) => {
         processed: successCount,
         errors: errorCount,
       }),
-      { headers: { "Content-Type": "application/json" } }
+      { 
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders // Add CORS headers
+        } 
+      }
     );
   } catch (error) {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      { 
+        status: 500, 
+        headers: { 
+          "Content-Type": "application/json",
+          ...corsHeaders // Add CORS headers
+        } 
+      }
     );
   }
 });
 
 async function generateInsightsForUser(userId: string, supabase: any) {
-  // Calculate date ranges
   const endDate = new Date();
   const startDate = new Date();
-  startDate.setDate(startDate.getDate() - 30); // Last 30 days
+  startDate.setDate(startDate.getDate() - 30);
 
   const prevEndDate = new Date(startDate);
   prevEndDate.setDate(prevEndDate.getDate() - 1);
   const prevStartDate = new Date(prevEndDate);
-  prevStartDate.setDate(prevStartDate.getDate() - 30); // Previous 30 days
+  prevStartDate.setDate(prevStartDate.getDate() - 30);
 
-  // Fetch user data
   const [currentTransactions, previousTransactions, budgets, categories] =
     await Promise.all([
       fetchTransactions(supabase, userId, startDate, endDate),
@@ -84,7 +105,6 @@ async function generateInsightsForUser(userId: string, supabase: any) {
       fetchCategories(supabase, userId),
     ]);
 
-  // Prepare data for AI
   const analysisData = {
     current_period: {
       start: startDate.toISOString().split("T")[0],
@@ -105,10 +125,7 @@ async function generateInsightsForUser(userId: string, supabase: any) {
     categories: categories,
   };
 
-  // Generate insights using Gemini
   const insights = await generateInsightsWithGemini(analysisData);
-
-  // Save insights to database
   await saveInsights(supabase, userId, insights, startDate, endDate);
 }
 
@@ -179,6 +196,12 @@ function groupByCategory(transactions: any[], categories: any[]) {
 }
 
 async function generateInsightsWithGemini(data: any) {
+  // Add more detailed logging
+  console.log('=== Starting Gemini Analysis ===');
+  console.log('Transaction count:', data.current_period.transactions.length);
+  console.log('Current expense:', data.current_period.total_expense);
+  console.log('Previous expense:', data.previous_period.total_expense);
+
   const prompt = `Kamu adalah seorang penasihat keuangan profesional. Analisis data transaksi berikut dan berikan 3-5 wawasan keuangan yang ACTIONABLE dan SPESIFIK dalam Bahasa Indonesia.
 
 Data Keuangan:
@@ -213,33 +236,154 @@ Contoh insight yang BAIK:
 
 Berikan HANYA JSON array, tanpa teks tambahan.`;
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-        },
-      }),
+  try {
+    console.log('Calling Gemini API...');
+    
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 2048,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API Error:', response.status, errorText);
+      throw new Error(`Gemini API failed: ${response.status}`);
     }
-  );
 
-  const result = await response.json();
-  const generatedText =
-    result.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+    const result = await response.json();
+    console.log('Gemini API Response:', JSON.stringify(result, null, 2));
 
-  // Parse JSON from response
-  const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
-  if (!jsonMatch) {
-    console.error("Failed to extract JSON from Gemini response");
-    return [];
+    const generatedText =
+      result.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+    
+    console.log('Generated Text:', generatedText);
+
+    // Try to extract JSON from response
+    const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
+    
+    if (!jsonMatch) {
+      console.error("Failed to extract JSON from Gemini response");
+      console.error("Full response text:", generatedText);
+      
+      // Generate fallback insights based on data
+      return generateFallbackInsights(data);
+    }
+
+    const insights = JSON.parse(jsonMatch[0]);
+    console.log(`Successfully parsed ${insights.length} insights`);
+    
+    return insights;
+  } catch (error) {
+    console.error('Error in generateInsightsWithGemini:', error);
+    // Return fallback insights on error
+    return generateFallbackInsights(data);
+  }
+}
+
+// Fallback insights generator (doesn't rely on AI)
+function generateFallbackInsights(data: any): any[] {
+  const insights: any[] = [];
+  
+  // Compare current vs previous period
+  const currentExpense = data.current_period.total_expense;
+  const previousExpense = data.previous_period.total_expense;
+  const expenseChange = currentExpense - previousExpense;
+  const expenseChangePercent = previousExpense > 0 
+    ? ((expenseChange / previousExpense) * 100).toFixed(1)
+    : 0;
+
+  // Insight 1: Expense trend
+  if (Math.abs(expenseChange) > 0) {
+    insights.push({
+      title: expenseChange > 0 
+        ? `Pengeluaran Naik ${expenseChangePercent}%`
+        : `Pengeluaran Turun ${Math.abs(Number(expenseChangePercent))}%`,
+      description: expenseChange > 0
+        ? `Total pengeluaran bulan ini Rp ${currentExpense.toLocaleString('id-ID')}, naik Rp ${expenseChange.toLocaleString('id-ID')} dari bulan lalu.`
+        : `Selamat! Anda berhasil hemat Rp ${Math.abs(expenseChange).toLocaleString('id-ID')} bulan ini.`,
+      type: expenseChange > 0 ? 'spending' : 'saving',
+      severity: expenseChange > 0 ? 'warning' : 'success',
+      metadata: {
+        amount_change: expenseChange,
+        percentage_change: Number(expenseChangePercent),
+      },
+    });
   }
 
-  return JSON.parse(jsonMatch[0]);
+  // Insight 2: Budget alerts
+  if (data.budgets && data.budgets.length > 0) {
+    data.budgets.forEach((budget: any) => {
+      const spent = data.current_period.by_category.find(
+        (cat: any) => cat.category === budget.category?.name
+      )?.total || 0;
+      
+      const percentage = (spent / budget.amount) * 100;
+      
+      if (percentage >= 80) {
+        insights.push({
+          title: `Budget ${budget.category?.name} ${percentage >= 100 ? 'Terlewati' : 'Hampir Habis'}`,
+          description: `${budget.category?.name}: Rp ${spent.toLocaleString('id-ID')} dari Rp ${budget.amount.toLocaleString('id-ID')} (${percentage.toFixed(0)}%)`,
+          type: 'budget',
+          severity: percentage >= 100 ? 'critical' : 'warning',
+          metadata: {
+            category: budget.category?.name,
+            spent: spent,
+            budget: budget.amount,
+            percentage: percentage,
+          },
+        });
+      }
+    });
+  }
+
+  // Insight 3: Top spending category
+  if (data.current_period.by_category.length > 0) {
+    const topCategory = data.current_period.by_category
+      .filter((cat: any) => cat.type === 'expense')
+      .sort((a: any, b: any) => b.total - a.total)[0];
+    
+    if (topCategory) {
+      insights.push({
+        title: `Pengeluaran Terbesar: ${topCategory.category}`,
+        description: `${topCategory.category} adalah pengeluaran terbesar dengan total Rp ${topCategory.total.toLocaleString('id-ID')} dari ${topCategory.count} transaksi.`,
+        type: 'trend',
+        severity: 'info',
+        metadata: {
+          category: topCategory.category,
+          amount: topCategory.total,
+          count: topCategory.count,
+        },
+      });
+    }
+  }
+
+  // Insight 4: Transaction count
+  const txCount = data.current_period.transactions.length;
+  if (txCount > 0) {
+    insights.push({
+      title: `${txCount} Transaksi Bulan Ini`,
+      description: `Anda mencatat ${txCount} transaksi dengan total pengeluaran Rp ${currentExpense.toLocaleString('id-ID')}.`,
+      type: 'general',
+      severity: 'info',
+      metadata: {
+        transaction_count: txCount,
+        total_expense: currentExpense,
+      },
+    });
+  }
+
+  console.log(`Generated ${insights.length} fallback insights`);
+  return insights;
 }
 
 async function saveInsights(
@@ -249,7 +393,6 @@ async function saveInsights(
   startDate: Date,
   endDate: Date
 ) {
-  // Delete old insights for this user (keep only last 30 days)
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -259,7 +402,6 @@ async function saveInsights(
     .eq("user_id", userId)
     .lt("created_at", thirtyDaysAgo.toISOString());
 
-  // Insert new insights
   const insightsToInsert = insights.map((insight) => ({
     user_id: userId,
     title: insight.title,
