@@ -12,7 +12,8 @@ import {
   LogOut,
   X,
   Wallet,
-  PiggyBank
+  PiggyBank,
+  BrainCircuit
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,6 +47,11 @@ const navItems = [
     title: 'Analytics',
     href: '/dashboard/analytics',
     icon: BarChart3,
+  },
+  {
+    title: 'Insights',
+    href: '/dashboard/insights',
+    icon: BrainCircuit,
   },
   {
     title: 'OCR Upload',

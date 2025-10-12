@@ -46,6 +46,21 @@ export type BudgetWithSpent = Budget & {
   remaining: number;
 };
 
+export type Insight = {
+  id: number;
+  user_id: string;
+  title: string;
+  description: string;
+  insight_type: 'spending' | 'saving' | 'budget' | 'trend' | 'subscription' | 'general';
+  severity: 'info' | 'warning' | 'success' | 'critical';
+  period_start: string;
+  period_end: string;
+  metadata: Record<string, any> | null;
+  is_read: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type UserProfile = {
   id: string;
   user_id: string;
