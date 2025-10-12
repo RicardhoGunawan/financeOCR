@@ -1,0 +1,543 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { supabase, Category, Budget, BudgetWithSpent } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth-context';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Plus, Edit, Trash2, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react';
+import { toast } from 'sonner';
+
+const formatRupiah = (amount: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+export default function BudgetsPage() {
+  const { user } = useAuth();
+  const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
+
+  const currentDate = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear());
+
+  const [formData, setFormData] = useState({
+    category_id: '',
+    amount: '',
+    month: selectedMonth.toString(),
+    year: selectedYear.toString(),
+  });
+
+  useEffect(() => {
+    if (user) {
+      loadCategories();
+      loadBudgets();
+    }
+  }, [user, selectedMonth, selectedYear]);
+
+  const loadCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('type', 'expense')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+    }
+  };
+
+  const loadBudgets = async () => {
+    try {
+      setLoading(true);
+      const { data: budgetsData, error: budgetsError } = await supabase
+        .from('budgets')
+        .select('*, category:categories(*)')
+        .eq('user_id', user?.id)
+        .eq('month', selectedMonth)
+        .eq('year', selectedYear);
+
+      if (budgetsError) throw budgetsError;
+
+      const budgetsWithSpent: BudgetWithSpent[] = await Promise.all(
+        (budgetsData || []).map(async (budget) => {
+          const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+          const endDate = new Date(selectedYear, selectedMonth, 0);
+
+          const { data: transactions } = await supabase
+            .from('transactions')
+            .select('amount')
+            .eq('user_id', user?.id)
+            .eq('category_id', budget.category_id)
+            .eq('type', 'expense')
+            .gte('date', startDate.toISOString().split('T')[0])
+            .lte('date', endDate.toISOString().split('T')[0]);
+
+          const spent = transactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+          const percentage = (spent / budget.amount) * 100;
+          const remaining = budget.amount - spent;
+
+          return {
+            ...budget,
+            spent,
+            percentage: Math.min(percentage, 100),
+            remaining,
+          };
+        })
+      );
+
+      setBudgets(budgetsWithSpent);
+    } catch (error) {
+      console.error('Error loading budgets:', error);
+      toast.error('Failed to load budgets');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const budgetData = {
+        user_id: user?.id,
+        category_id: parseInt(formData.category_id),
+        amount: parseFloat(formData.amount),
+        month: parseInt(formData.month),
+        year: parseInt(formData.year),
+      };
+
+      if (editingBudget) {
+        const { error } = await supabase
+          .from('budgets')
+          .update(budgetData)
+          .eq('id', editingBudget.id);
+
+        if (error) throw error;
+        toast.success('Budget updated successfully');
+      } else {
+        const { error } = await supabase.from('budgets').insert([budgetData]);
+
+        if (error) {
+          if (error.code === '23505') {
+            toast.error('A budget for this category already exists in the same month/year');
+          } else {
+            throw error;
+          }
+          return;
+        }
+        toast.success('Budget added successfully');
+      }
+
+      setDialogOpen(false);
+      resetForm();
+      loadBudgets();
+    } catch (error) {
+      console.error('Error saving budget:', error);
+      toast.error('Failed to save budget');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this budget?')) return;
+
+    try {
+      const { error } = await supabase.from('budgets').delete().eq('id', id);
+      if (error) throw error;
+      toast.success('Budget deleted successfully');
+      loadBudgets();
+    } catch (error) {
+      console.error('Error deleting budget:', error);
+      toast.error('Failed to delete budget');
+    }
+  };
+
+  const openEditDialog = (budget: Budget) => {
+    setEditingBudget(budget);
+    setFormData({
+      category_id: budget.category_id.toString(),
+      amount: budget.amount.toString(),
+      month: budget.month.toString(),
+      year: budget.year.toString(),
+    });
+    setDialogOpen(true);
+  };
+
+  const resetForm = () => {
+    setEditingBudget(null);
+    setFormData({
+      category_id: '',
+      amount: '',
+      month: selectedMonth.toString(),
+      year: selectedYear.toString(),
+    });
+  };
+
+  const getStatusColor = (percentage: number) => {
+    if (percentage >= 100) return 'text-red-600';
+    if (percentage >= 80) return 'text-orange-600';
+    return 'text-green-600';
+  };
+
+  const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
+  const totalSpent = budgets.reduce((sum, b) => sum + b.spent, 0);
+  const totalRemaining = totalBudget - totalSpent;
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="h-8 w-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Budget Management</h1>
+          <p className="text-sm sm:text-base text-slate-600 mt-1">
+            Manage your monthly budgets by category
+          </p>
+        </div>
+        <Dialog
+          open={dialogOpen}
+          onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button className="gap-2 w-full sm:w-auto">
+              <Plus className="h-4 w-4" />
+              Add Budget
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingBudget ? 'Edit Budget' : 'Add New Budget'}
+              </DialogTitle>
+              <DialogDescription>
+                {editingBudget
+                  ? 'Update the budget for this category.'
+                  : 'Create a new budget to control your expenses.'}
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category_id}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, category_id: value })
+                  }
+                  disabled={!!editingBudget}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="amount">Budget Amount</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  step="1000"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                  placeholder="1000000"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="month">Month</Label>
+                  <Select
+                    value={formData.month}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, month: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTHS.map((month, index) => (
+                        <SelectItem key={index} value={(index + 1).toString()}>
+                          {month}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="year">Year</Label>
+                  <Select
+                    value={formData.year}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, year: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(
+                        (year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                <Button type="submit" className="flex-1">
+                  {editingBudget ? 'Update' : 'Add'} Budget
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setDialogOpen(false);
+                    resetForm();
+                  }}
+                  className="flex-1 sm:flex-initial"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Month/Year Selector */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <Label className="text-sm font-medium text-slate-700">Period:</Label>
+            <div className="flex gap-3 w-full sm:w-auto">
+              <Select
+                value={selectedMonth.toString()}
+                onValueChange={(value) => setSelectedMonth(parseInt(value))}
+              >
+                <SelectTrigger className="w-full sm:w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((month, index) => (
+                    <SelectItem key={index} value={(index + 1).toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(value) => setSelectedYear(parseInt(value))}
+              >
+                <SelectTrigger className="w-full sm:w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(
+                    (year) => (
+                      <SelectItem key={year} value={year.toString()}>
+                        {year}
+                      </SelectItem>
+                    )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Summary Cards */}
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-3 mb-6 sm:mb-8">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">Total Budget</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold text-slate-900">
+              {formatRupiah(totalBudget)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">Total Spent</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold text-blue-600">
+              {formatRupiah(totalSpent)}
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              {totalBudget > 0 ? ((totalSpent / totalBudget) * 100).toFixed(1) : 0}% of total budget
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium text-slate-600">Remaining</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div
+              className={`text-xl sm:text-2xl font-bold ${
+                totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}
+            >
+              {formatRupiah(totalRemaining)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Budget List */}
+      <div className="space-y-4">
+        {budgets.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <TrendingUp className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-600">
+                No budgets found for {MONTHS[selectedMonth - 1]} {selectedYear}.
+              </p>
+              <p className="text-sm text-slate-500 mt-2">
+                Add your first budget to start managing your expenses!
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          budgets.map((budget) => (
+            <Card key={budget.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                        budget.percentage >= 100
+                          ? 'bg-red-100'
+                          : budget.percentage >= 80
+                          ? 'bg-orange-100'
+                          : 'bg-green-100'
+                      }`}
+                    >
+                      {budget.percentage >= 100 ? (
+                        <AlertTriangle className="h-5 w-5 text-red-600" />
+                      ) : (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">
+                        {budget.category?.name || 'Unknown'}
+                      </h3>
+                      <p className="text-sm text-slate-600">
+                        Budget: {formatRupiah(budget.amount)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => openEditDialog(budget)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleDelete(budget.id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-600">
+                      Spent: {formatRupiah(budget.spent)}
+                    </span>
+                    <span className={`font-medium ${getStatusColor(budget.percentage)}`}>
+                      {budget.percentage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress value={budget.percentage} className="h-2" />
+                  <div className="flex justify-between text-xs text-slate-600">
+                    <span>Remaining: {formatRupiah(budget.remaining)}</span>
+                    {budget.percentage >= 100 && (
+                      <span className="text-red-600 font-medium">
+                        Over by {formatRupiah(Math.abs(budget.remaining))}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

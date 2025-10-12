@@ -28,6 +28,24 @@ export type Category = {
   created_at: string;
 };
 
+export type Budget = {
+  id: number;
+  user_id: string;
+  category_id: number;
+  amount: number;
+  month: number; // 1-12
+  year: number;
+  created_at: string;
+  updated_at: string;
+  category?: Category;
+};
+
+export type BudgetWithSpent = Budget & {
+  spent: number;
+  percentage: number;
+  remaining: number;
+};
+
 export type UserProfile = {
   id: string;
   user_id: string;

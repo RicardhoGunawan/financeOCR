@@ -11,7 +11,8 @@ import {
   ScanLine,
   LogOut,
   X,
-  Wallet
+  Wallet,
+  PiggyBank
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,12 @@ const navItems = [
     href: '/dashboard/categories',
     icon: Tags,
   },
+  {
+    title: 'Budgets',
+    href: '/dashboard/budgets',
+    icon: PiggyBank,
+  },
+
   {
     title: 'Analytics',
     href: '/dashboard/analytics',
