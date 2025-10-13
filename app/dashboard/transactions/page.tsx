@@ -23,8 +23,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, ArrowUpRight, ArrowDownRight, Trash2, Edit } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, ArrowUpRight, ArrowDownRight, Trash2, Edit, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -35,13 +37,22 @@ const formatRupiah = (amount: number) => {
   }).format(amount);
 };
 
+type TransactionWithWallet = Transaction & {
+  wallet?: {
+    id: number;
+    name: string;
+    color: string;
+  };
+};
+
 export default function TransactionsPage() {
   const { user } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithWallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] = useState<TransactionWithWallet | null>(null);
+  const [wallets, setWallets] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -50,12 +61,14 @@ export default function TransactionsPage() {
     date: new Date().toISOString().split('T')[0],
     category_id: '',
     note: '',
+    wallet_id: '',
   });
 
   useEffect(() => {
     if (user) {
       loadTransactions();
       loadCategories();
+      loadWallets();
     }
   }, [user]);
 
@@ -63,7 +76,11 @@ export default function TransactionsPage() {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select('*, category:categories(*)')
+        .select(`
+          *,
+          category:categories(*),
+          wallet:wallets(id, name, color)
+        `)
         .eq('user_id', user?.id)
         .order('date', { ascending: false });
 
@@ -92,62 +109,169 @@ export default function TransactionsPage() {
     }
   };
 
+  const loadWallets = async () => {
+    const { data } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', user?.id)
+      .eq('is_active', true)
+      .order('name');
+    setWallets(data || []);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.wallet_id) {
+      toast.error('Please select a wallet');
+      return;
+    }
+
     try {
+      const amount = parseFloat(formData.amount);
+      const walletId = parseInt(formData.wallet_id);
+
+      // Get current wallet balance
+      const { data: walletData } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('id', walletId)
+        .single();
+
+      if (!walletData) {
+        toast.error('Wallet not found');
+        return;
+      }
+
       const transactionData = {
         user_id: user?.id,
         title: formData.title,
-        amount: parseFloat(formData.amount),
+        amount: amount,
         type: formData.type,
         date: formData.date,
         category_id: formData.category_id ? parseInt(formData.category_id) : null,
         note: formData.note || null,
+        wallet_id: walletId,
         source: 'manual' as const,
       };
 
       if (editingTransaction) {
+        // When editing, we need to reverse the old transaction first
+        const oldAmount = Number(editingTransaction.amount);
+        const oldType = editingTransaction.type;
+        const oldWalletId = editingTransaction.wallet_id;
+
+        // Reverse old transaction on old wallet
+        if (oldWalletId) {
+          const { data: oldWallet } = await supabase
+            .from('wallets')
+            .select('balance')
+            .eq('id', oldWalletId)
+            .single();
+
+          if (oldWallet) {
+            const reversedBalance = oldType === 'income'
+              ? oldWallet.balance - oldAmount
+              : oldWallet.balance + oldAmount;
+
+            await supabase
+              .from('wallets')
+              .update({ balance: reversedBalance })
+              .eq('id', oldWalletId);
+          }
+        }
+
+        // Update transaction
         const { error } = await supabase
           .from('transactions')
           .update(transactionData)
           .eq('id', editingTransaction.id);
 
         if (error) throw error;
+
+        // Apply new transaction to new wallet
+        const newBalance = formData.type === 'income'
+          ? walletData.balance + amount
+          : walletData.balance - amount;
+
+        await supabase
+          .from('wallets')
+          .update({ balance: newBalance })
+          .eq('id', walletId);
+
         toast.success('Transaction updated successfully');
       } else {
+        // Insert new transaction
         const { error } = await supabase
           .from('transactions')
           .insert([transactionData]);
 
         if (error) throw error;
+
+        // Update wallet balance
+        const newBalance = formData.type === 'income'
+          ? walletData.balance + amount
+          : walletData.balance - amount;
+
+        await supabase
+          .from('wallets')
+          .update({ balance: newBalance })
+          .eq('id', walletId);
+
         toast.success('Transaction added successfully');
       }
 
       setDialogOpen(false);
       resetForm();
       loadTransactions();
+      loadWallets();
     } catch (error) {
       console.error('Error saving transaction:', error);
       toast.error('Failed to save transaction');
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this transaction?')) return;
+  const handleDelete = async (transaction: TransactionWithWallet) => {
 
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      // Reverse the transaction on the wallet
+      if (transaction.wallet_id) {
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('id', transaction.wallet_id)
+          .single();
+
+        if (wallet) {
+          const newBalance = transaction.type === 'income'
+            ? wallet.balance - Number(transaction.amount)
+            : wallet.balance + Number(transaction.amount);
+
+          await supabase
+            .from('wallets')
+            .update({ balance: newBalance })
+            .eq('id', transaction.wallet_id);
+        }
+      }
+
+      // Delete transaction
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transaction.id);
+
       if (error) throw error;
+
       toast.success('Transaction deleted successfully');
       loadTransactions();
+      loadWallets();
     } catch (error) {
       console.error('Error deleting transaction:', error);
       toast.error('Failed to delete transaction');
     }
   };
 
-  const openEditDialog = (transaction: Transaction) => {
+  const openEditDialog = (transaction: TransactionWithWallet) => {
     setEditingTransaction(transaction);
     setFormData({
       title: transaction.title,
@@ -156,6 +280,7 @@ export default function TransactionsPage() {
       date: transaction.date,
       category_id: transaction.category_id?.toString() || '',
       note: transaction.note || '',
+      wallet_id: transaction.wallet_id?.toString() || '',
     });
     setDialogOpen(true);
   };
@@ -169,6 +294,7 @@ export default function TransactionsPage() {
       date: new Date().toISOString().split('T')[0],
       category_id: '',
       note: '',
+      wallet_id: '',
     });
   };
 
@@ -187,7 +313,7 @@ export default function TransactionsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Transactions</h1>
           <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Manage your income and expenses
+            Manage your income and expenses across all wallets
           </p>
         </div>
         <Dialog
@@ -259,6 +385,34 @@ export default function TransactionsPage() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="wallet" className="text-xs sm:text-sm">Wallet</Label>
+                  <Select
+                    value={formData.wallet_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, wallet_id: value })
+                    }
+                    required
+                  >
+                    <SelectTrigger className="text-sm h-9 sm:h-10">
+                      <SelectValue placeholder="Select wallet" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {wallets.map((wallet) => (
+                        <SelectItem key={wallet.id} value={wallet.id.toString()}>
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="h-3 w-3 rounded-full"
+                              style={{ backgroundColor: wallet.color }}
+                            />
+                            {wallet.name} ({formatRupiah(wallet.balance)})
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
@@ -349,9 +503,7 @@ export default function TransactionsPage() {
                 >
                   <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
                     <div
-                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0 ${transaction.type === 'income'
-                          ? 'bg-green-100'
-                          : 'bg-red-100'
+                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0 ${transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
                         }`}
                     >
                       {transaction.type === 'income' ? (
@@ -378,6 +530,22 @@ export default function TransactionsPage() {
                             <span>{transaction.category.name}</span>
                           </>
                         )}
+                        {transaction.wallet && (
+                          <>
+                            <span className="hidden sm:inline">•</span>
+                            <Badge
+                              variant="outline"
+                              className="gap-1 text-xs"
+                              style={{ borderColor: transaction.wallet.color }}
+                            >
+                              <div
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: transaction.wallet.color }}
+                              />
+                              {transaction.wallet.name}
+                            </Badge>
+                          </>
+                        )}
                         <span className="hidden sm:inline">•</span>
                         <span className="capitalize">{transaction.source}</span>
                       </div>
@@ -385,18 +553,11 @@ export default function TransactionsPage() {
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
                     <div
-                      className={`text-base sm:text-xl font-bold ${transaction.type === 'income'
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                      className={`text-base sm:text-xl font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                         }`}
                     >
                       {transaction.type === 'income' ? '+' : '-'}
-                      <span className="hidden sm:inline">
-                        {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
-                      </span>
-                      <span className="sm:hidden">
-                        {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
-                      </span>
+                      {formatRupiah(Number(transaction.amount))}
                     </div>
                     <div className="flex gap-1 sm:gap-2">
                       <Button
@@ -407,14 +568,22 @@ export default function TransactionsPage() {
                       >
                         <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 sm:h-10 sm:w-10"
-                        onClick={() => handleDelete(transaction.id)}
+                      <ConfirmDialog
+                        title="Are you sure?"
+                        description="This action will permanently remove the selected data from the system. Please confirm to continue."
+                        onConfirm={() => handleDelete(transaction)}
+                        confirmText="Delete"
+                        isDestructive={true} // This will apply the red style to the delete button
                       >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-                      </Button>
+                        {/* This is the trigger element (children) */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 sm:h-10 sm:w-10"
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                        </Button>
+                      </ConfirmDialog>
                     </div>
                   </div>
                 </div>

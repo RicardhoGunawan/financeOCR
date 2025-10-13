@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select';
 import { Plus, Edit, Trash2, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -174,8 +175,6 @@ export default function BudgetsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this budget?')) return;
-
     try {
       const { error } = await supabase.from('budgets').delete().eq('id', id);
       if (error) throw error;
@@ -443,9 +442,8 @@ export default function BudgetsPage() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-xl sm:text-2xl font-bold ${
-                totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
+              className={`text-xl sm:text-2xl font-bold ${totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
             >
               {formatRupiah(totalRemaining)}
             </div>
@@ -474,13 +472,12 @@ export default function BudgetsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        budget.percentage >= 100
+                      className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${budget.percentage >= 100
                           ? 'bg-red-100'
                           : budget.percentage >= 80
-                          ? 'bg-orange-100'
-                          : 'bg-green-100'
-                      }`}
+                            ? 'bg-orange-100'
+                            : 'bg-green-100'
+                        }`}
                     >
                       {budget.percentage >= 100 ? (
                         <AlertTriangle className="h-5 w-5 text-red-600" />
@@ -506,14 +503,22 @@ export default function BudgetsPage() {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 sm:h-9 sm:w-9"
-                      onClick={() => handleDelete(budget.id)}
+                    <ConfirmDialog
+                      title="Are you sure?"
+                      description="This action will permanently remove the selected data from the system. Please confirm to continue."
+                      onConfirm={() => handleDelete(transaction)}
+                      confirmText="Delete"
+                      isDestructive={true} // This will apply the red style to the delete button
                     >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
+                      {/* This is the trigger element (children) */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 sm:h-10 sm:w-10"
+                      >
+                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                      </Button>
+                    </ConfirmDialog>
                   </div>
                 </div>
 

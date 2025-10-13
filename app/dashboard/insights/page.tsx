@@ -17,6 +17,12 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -275,7 +281,9 @@ export default function InsightsPage() {
       </Card>
 
       {/* Insights List */}
+      {/* Insights List */}
       {insights.length === 0 ? (
+        // Bagian ini tetap sama
         <Card>
           <CardContent className="py-12 text-center">
             <Sparkles className="h-12 w-12 text-slate-300 mx-auto mb-4" />
@@ -292,82 +300,75 @@ export default function InsightsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedInsights).map(([date, dateInsights]) => (
-            <div key={date}>
-              <h2 className="text-sm font-semibold text-slate-600 mb-3">{date}</h2>
-              <div className="space-y-3">
-                {dateInsights.map((insight) => {
-                  const Icon = getInsightIcon(insight.insight_type);
-                  const SeverityIcon = getSeverityIcon(insight.severity);
+        // --- STRUKTUR AKORDEON BARU PER-INSIGHT ---
+        <Accordion type="single" collapsible className="w-full space-y-3">          {insights.map((insight) => {
+          const Icon = getInsightIcon(insight.insight_type);
+          const SeverityIcon = getSeverityIcon(insight.severity);
 
-                  return (
-                    <Card
-                      key={insight.id}
-                      className={`transition-all hover:shadow-md ${!insight.is_read ? 'border-l-4 border-l-emerald-600' : ''
-                        }`}
-                    >
-                      <CardContent className="pt-6">
-                        <div className="flex items-start gap-3 sm:gap-4">
-                          <div
-                            className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0 ${getSeverityColor(
-                              insight.severity
-                            )}`}
-                          >
-                            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                          </div>
+          return (
+            <AccordionItem
+              key={insight.id}
+              value={String(insight.id)} // Value harus string
+              // Beri border kiri untuk menandai item yang belum dibaca
+              className={`border rounded-lg bg-white overflow-hidden transition-all ${!insight.is_read ? 'border-l-4 border-l-emerald-500' : ''
+                }`}
+            >
+              {/* TRIGGER: Ringkasan dari insight */}
+              <AccordionTrigger
+                className="p-3 hover:no-underline"
+                // Otomatis tandai terbaca saat dibuka
+                onClick={() => !insight.is_read && markAsRead(insight.id)}
+              >
+                <div className="flex items-center gap-4 w-full">
+                  <div
+                    className={`h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${getSeverityColor(insight.severity)}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 text-left min-w-0">
+                    <p className="font-semibold text-slate-900 text-sm truncate">
+                      {insight.title}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {new Date(insight.created_at).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`ml-auto flex-shrink-0 ${getSeverityColor(insight.severity)}`}
+                  >
+                    <SeverityIcon className="h-3 w-3 mr-1" />
+                    {insight.severity}
+                  </Badge>
+                </div>
+              </AccordionTrigger>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <h3 className="font-semibold text-slate-900 text-sm sm:text-base">
-                                {insight.title}
-                              </h3>
-                              <Badge
-                                variant="outline"
-                                className={`flex-shrink-0 ${getSeverityColor(
-                                  insight.severity
-                                )}`}
-                              >
-                                <SeverityIcon className="h-3 w-3 mr-1" />
-                                {insight.severity}
-                              </Badge>
-                            </div>
-
-                            <p className="text-sm text-slate-700 mb-3">
-                              {insight.description}
-                            </p>
-
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                              <Badge variant="secondary" className="capitalize">
-                                {insight.insight_type}
-                              </Badge>
-                              <span>•</span>
-                              <span>
-                                Period: {new Date(insight.period_start).toLocaleDateString('en-US')} -{' '}
-                                {new Date(insight.period_end).toLocaleDateString('en-US')}
-                              </span>
-                            </div>
-
-                            {!insight.is_read && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="mt-3 text-xs"
-                                onClick={() => markAsRead(insight.id)}
-                              >
-                                Mark as Read
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+              {/* CONTENT: Detail lengkap dari insight */}
+              <AccordionContent>
+                <div className="border-t p-4 pt-3">
+                  <p className="text-sm text-slate-700 mb-4">
+                    {insight.description}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <Badge variant="secondary" className="capitalize">
+                      {insight.insight_type}
+                    </Badge>
+                    <span>•</span>
+                    <span>
+                      Periode: {new Date(insight.period_start).toLocaleDateString('id-ID')} -{' '}
+                      {new Date(insight.period_end).toLocaleDateString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+        </Accordion>
       )}
     </div>
   );

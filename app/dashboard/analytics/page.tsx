@@ -26,7 +26,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 
 type MonthlyData = {
   month: string;
@@ -38,6 +38,12 @@ type MonthlyData = {
 type CategoryData = {
   name: string;
   value: number;
+};
+
+type WalletData = {
+  name: string;
+  value: number;
+  color: string;
 };
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -64,6 +70,7 @@ export default function AnalyticsPage() {
     income: [],
     expense: [],
   });
+  const [walletData, setWalletData] = useState<WalletData[]>([]);
   const [summary, setSummary] = useState({
     totalIncome: 0,
     totalExpense: 0,
@@ -71,11 +78,13 @@ export default function AnalyticsPage() {
     avgExpense: 0,
     highestExpense: 0,
     highestIncome: 0,
+    walletBalance: 0,
   });
 
   useEffect(() => {
     if (user) {
       loadAnalytics();
+      loadWalletData();
     }
   }, [user, timeRange]);
 
@@ -102,6 +111,29 @@ export default function AnalyticsPage() {
       console.error('Error loading analytics:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWalletData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('name, balance, color, is_active')
+        .eq('user_id', user?.id)
+        .eq('is_active', true)
+        .order('balance', { ascending: false });
+
+      if (error) throw error;
+
+      const walletChartData = (data || []).map((wallet) => ({
+        name: wallet.name,
+        value: Number(wallet.balance),
+        color: wallet.color || '#10b981',
+      }));
+
+      setWalletData(walletChartData);
+    } catch (error) {
+      console.error('Error loading wallet data:', error);
     }
   };
 
@@ -144,7 +176,7 @@ export default function AnalyticsPage() {
     const expenseMap = new Map<string, number>();
 
     transactions.forEach((transaction) => {
-      const categoryName = transaction.category?.name || 'Tidak Berkategori';
+      const categoryName = transaction.category?.name || 'Uncategorized';
       const map = transaction.type === 'income' ? incomeMap : expenseMap;
       map.set(categoryName, (map.get(categoryName) || 0) + Number(transaction.amount));
     });
@@ -161,12 +193,21 @@ export default function AnalyticsPage() {
     });
   };
 
-  const calculateSummary = (transactions: Transaction[]) => {
+  const calculateSummary = async (transactions: Transaction[]) => {
     const income = transactions.filter((t) => t.type === 'income');
     const expenses = transactions.filter((t) => t.type === 'expense');
 
     const totalIncome = income.reduce((sum, t) => sum + Number(t.amount), 0);
     const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
+
+    // Get total wallet balance
+    const { data: wallets } = await supabase
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', user?.id)
+      .eq('is_active', true);
+
+    const walletBalance = wallets?.reduce((sum, w) => sum + Number(w.balance), 0) || 0;
 
     setSummary({
       totalIncome,
@@ -175,6 +216,7 @@ export default function AnalyticsPage() {
       avgExpense: expenses.length > 0 ? totalExpense / expenses.length : 0,
       highestIncome: income.length > 0 ? Math.max(...income.map((t) => Number(t.amount))) : 0,
       highestExpense: expenses.length > 0 ? Math.max(...expenses.map((t) => Number(t.amount))) : 0,
+      walletBalance,
     });
   };
 
@@ -209,7 +251,7 @@ export default function AnalyticsPage() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Financial Analysis</h1>
           <p className="text-sm sm:text-base text-slate-600 mt-1">
-            Visualize your financial patterns and trends
+            Visualize your financial patterns and trends across all wallets
           </p>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
@@ -218,14 +260,27 @@ export default function AnalyticsPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="3months">Last 3 Months</SelectItem>
-            <SelectItem value="6months">Last 6 Mouths</SelectItem>
+            <SelectItem value="6months">Last 6 Months</SelectItem>
             <SelectItem value="12months">Last 12 Months</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-6 sm:mb-8">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Wallet Balance</CardTitle>
+            <Wallet className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-xl sm:text-2xl font-bold text-emerald-600 truncate">
+              {formatRupiah(summary.walletBalance)}
+            </div>
+            <p className="text-xs text-slate-600 mt-1">Current total</p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average Income</CardTitle>
@@ -241,7 +296,7 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Average Expenditure</CardTitle>
+            <CardTitle className="text-sm font-medium">Average Expense</CardTitle>
             <TrendingDown className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -252,7 +307,7 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="sm:col-span-2 lg:col-span-1">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Net Flow</CardTitle>
             <DollarSign className="h-4 w-4 text-blue-600" />
@@ -260,9 +315,7 @@ export default function AnalyticsPage() {
           <CardContent>
             <div
               className={`text-xl sm:text-2xl font-bold truncate ${
-                summary.totalIncome - summary.totalExpense >= 0
-                  ? 'text-green-600'
-                  : 'text-red-600'
+                summary.totalIncome - summary.totalExpense >= 0 ? 'text-green-600' : 'text-red-600'
               }`}
             >
               {formatRupiah(summary.totalIncome - summary.totalExpense)}
@@ -282,14 +335,14 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="month" 
+                <XAxis
+                  dataKey="month"
                   tick={{ fontSize: 12 }}
                   angle={-45}
                   textAnchor="end"
                   height={60}
                 />
-                <YAxis 
+                <YAxis
                   tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                   tick={{ fontSize: 12 }}
                 />
@@ -300,14 +353,14 @@ export default function AnalyticsPage() {
                   dataKey="income"
                   stroke="#10b981"
                   strokeWidth={2}
-                  name="Pemasukan"
+                  name="Income"
                 />
                 <Line
                   type="monotone"
                   dataKey="expense"
                   stroke="#ef4444"
                   strokeWidth={2}
-                  name="Pengeluaran"
+                  name="Expense"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -322,28 +375,59 @@ export default function AnalyticsPage() {
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="month" 
+                <XAxis
+                  dataKey="month"
                   tick={{ fontSize: 12 }}
                   angle={-45}
                   textAnchor="end"
                   height={60}
                 />
-                <YAxis 
+                <YAxis
                   tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
                   tick={{ fontSize: 12 }}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
-                <Bar dataKey="net" fill="#3b82f6" name="Bersih" />
+                <Bar dataKey="net" fill="#3b82f6" name="Net" />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* Pie Charts */}
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
+      {/* Wallet Distribution & Category Charts */}
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2 mb-6 sm:mb-8">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base sm:text-lg">Wallet Distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {walletData.length === 0 ? (
+              <p className="text-slate-600 text-center py-12 text-sm">No wallet data</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={250}>
+                <PieChart>
+                  <Pie
+                    data={walletData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={window.innerWidth < 640 ? 60 : 80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {walletData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatRupiah(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">Expenses by Category</CardTitle>
@@ -359,9 +443,7 @@ export default function AnalyticsPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name}: ${(percent * 100).toFixed(0)}%`
-                    }
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                     outerRadius={window.innerWidth < 640 ? 60 : 80}
                     fill="#8884d8"
                     dataKey="value"
@@ -376,40 +458,39 @@ export default function AnalyticsPage() {
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base sm:text-lg">Income by Category</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {categoryData.income.length === 0 ? (
-              <p className="text-slate-600 text-center py-12 text-sm">No income data</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={categoryData.income}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      `${name}: ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={window.innerWidth < 640 ? 60 : 80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {categoryData.income.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatRupiah(value)} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
       </div>
+
+      {/* Income by Category */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base sm:text-lg">Income by Category</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {categoryData.income.length === 0 ? (
+            <p className="text-slate-600 text-center py-12 text-sm">No income data</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={categoryData.income}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={window.innerWidth < 640 ? 60 : 80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {categoryData.income.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value: number) => formatRupiah(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

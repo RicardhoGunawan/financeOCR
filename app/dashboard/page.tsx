@@ -7,16 +7,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Wallet, 
-  TrendingUp, 
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  TrendingUp,
   AlertTriangle,
   Lightbulb,
   Sparkles,
-  ChevronRight
+  ChevronRight,
 } from 'lucide-react';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 import { useRouter } from 'next/navigation';
 
 const formatRupiah = (amount: number) => {
@@ -41,6 +47,13 @@ const getSeverityColor = (severity: string) => {
   }
 };
 
+type TransactionWithWallet = Transaction & {
+  wallet?: {
+    name: string;
+    color: string;
+  };
+};
+
 export default function DashboardPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -50,16 +63,22 @@ export default function DashboardPage() {
     balance: 0,
     transactionCount: 0,
   });
-  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [recentTransactions, setRecentTransactions] = useState<TransactionWithWallet[]>([]);
   const [budgetAlerts, setBudgetAlerts] = useState<BudgetWithSpent[]>([]);
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [walletStats, setWalletStats] = useState({
+    total: 0,
+    count: 0,
+    activeCount: 0,
+  });
 
   useEffect(() => {
     if (user) {
       loadDashboardData();
       loadBudgetAlerts();
       loadInsights();
+      loadWalletStats();
     }
   }, [user]);
 
@@ -67,7 +86,7 @@ export default function DashboardPage() {
     try {
       const { data: transactions } = await supabase
         .from('transactions')
-        .select('*')
+        .select('*, wallet:wallets(name, color), category:categories(name)') // <-- Tambahkan kategori
         .eq('user_id', user?.id)
         .order('date', { ascending: false })
         .limit(5);
@@ -142,7 +161,7 @@ export default function DashboardPage() {
         })
       );
 
-      const alerts = budgetsWithSpent.filter(b => b.percentage >= 80);
+      const alerts = budgetsWithSpent.filter((b) => b.percentage >= 80);
       setBudgetAlerts(alerts);
     } catch (error) {
       console.error('Error loading budget alerts:', error);
@@ -163,6 +182,22 @@ export default function DashboardPage() {
       setInsights(data || []);
     } catch (error) {
       console.error('Error loading insights:', error);
+    }
+  };
+
+  const loadWalletStats = async () => {
+    const { data } = await supabase
+      .from('wallets')
+      .select('balance, is_active')
+      .eq('user_id', user?.id);
+
+    if (data) {
+      const activeWallets = data.filter((w) => w.is_active);
+      setWalletStats({
+        total: activeWallets.reduce((sum, w) => sum + Number(w.balance), 0),
+        count: data.length,
+        activeCount: activeWallets.length,
+      });
     }
   };
 
@@ -209,9 +244,11 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {insights.slice(0, 3).map((insight) => (
-              <div 
-                key={insight.id} 
-                className={`rounded-lg p-3 border cursor-pointer hover:shadow-md transition-shadow ${getSeverityColor(insight.severity)}`}
+              <div
+                key={insight.id}
+                className={`rounded-lg p-3 border cursor-pointer hover:shadow-md transition-shadow ${getSeverityColor(
+                  insight.severity
+                )}`}
                 onClick={() => router.push('/dashboard/insights')}
               >
                 <div className="flex items-start gap-3">
@@ -220,9 +257,7 @@ export default function DashboardPage() {
                     <h3 className="font-semibold text-slate-900 text-sm mb-1">
                       {insight.title}
                     </h3>
-                    <p className="text-xs text-slate-700 line-clamp-2">
-                      {insight.description}
-                    </p>
+                    <p className="text-xs text-slate-700 line-clamp-2">{insight.description}</p>
                   </div>
                 </div>
               </div>
@@ -247,34 +282,28 @@ export default function DashboardPage() {
                   <span className="font-medium text-slate-900 text-sm sm:text-base">
                     {budget.category?.name}
                   </span>
-                  <span className={`text-sm font-semibold ${
-                    budget.percentage >= 100 ? 'text-red-600' : 'text-orange-600'
-                  }`}>
+                  <span
+                    className={`text-sm font-semibold ${budget.percentage >= 100 ? 'text-red-600' : 'text-orange-600'
+                      }`}
+                  >
                     {budget.percentage.toFixed(0)}%
                   </span>
                 </div>
-                <Progress 
-                  value={Math.min(budget.percentage, 100)} 
-                  className="h-2 mb-2"
-                />
+                <Progress value={Math.min(budget.percentage, 100)} className="h-2 mb-2" />
                 <div className="flex justify-between text-xs text-slate-600">
                   <span className="truncate mr-2">
                     {formatRupiah(budget.spent)} / {formatRupiah(budget.amount)}
                   </span>
                   {budget.percentage >= 100 ? (
-                    <span className="text-red-600 font-medium flex-shrink-0">
-                      Over budget!
-                    </span>
+                    <span className="text-red-600 font-medium flex-shrink-0">Over budget!</span>
                   ) : (
-                    <span className="text-orange-600 flex-shrink-0">
-                      Approaching limit
-                    </span>
+                    <span className="text-orange-600 flex-shrink-0">Approaching limit</span>
                   )}
                 </div>
               </div>
             ))}
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full mt-2"
               onClick={() => router.push('/dashboard/budgets')}
             >
@@ -288,14 +317,16 @@ export default function DashboardPage() {
       <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Wallets</CardTitle>
             <Wallet className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold truncate">
-              {formatRupiah(stats.balance)}
+              {formatRupiah(walletStats.total)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Current balance</p>
+            <p className="text-xs text-slate-600 mt-1">
+              {walletStats.activeCount} active wallets
+            </p>
           </CardContent>
         </Card>
 
@@ -308,7 +339,7 @@ export default function DashboardPage() {
             <div className="text-xl sm:text-2xl font-bold text-green-600 truncate">
               {formatRupiah(stats.totalIncome)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Total income</p>
+            <p className="text-xs text-slate-600 mt-1">All transactions</p>
           </CardContent>
         </Card>
 
@@ -321,7 +352,7 @@ export default function DashboardPage() {
             <div className="text-xl sm:text-2xl font-bold text-red-600 truncate">
               {formatRupiah(stats.totalExpense)}
             </div>
-            <p className="text-xs text-slate-600 mt-1">Total expenses</p>
+            <p className="text-xs text-slate-600 mt-1">All transactions</p>
           </CardContent>
         </Card>
 
@@ -331,10 +362,8 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">
-              {stats.transactionCount}
-            </div>
-            <p className="text-xs text-slate-600 mt-1">Total transactions</p>
+            <div className="text-xl sm:text-2xl font-bold">{stats.transactionCount}</div>
+            <p className="text-xs text-slate-600 mt-1">Total recorded</p>
           </CardContent>
         </Card>
       </div>
@@ -350,58 +379,101 @@ export default function DashboardPage() {
               No transactions yet. Start by adding a transaction or uploading a receipt!
             </p>
           ) : (
-            <div className="space-y-3 sm:space-y-4">
+            <Accordion type="single" collapsible className="w-full">
               {recentTransactions.map((transaction) => (
-                <div
+                <AccordionItem
                   key={transaction.id}
-                  className="flex items-center justify-between border-b border-slate-200 pb-3 last:border-0 last:pb-0 gap-3"
+                  value={String(transaction.id)}
+                  className="border-b last:border-b-0"
                 >
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                    <div
-                      className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        transaction.type === 'income'
-                          ? 'bg-green-100'
-                          : 'bg-red-100'
-                      }`}
-                    >
-                      {transaction.type === 'income' ? (
-                        <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                      ) : (
-                        <ArrowDownRight className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                  {/* TRIGGER: Ringkasan Transaksi (Tetap Sama) */}
+                  <AccordionTrigger className="hover:no-underline py-3">
+                    <div className="flex items-center justify-between w-full gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                        <div
+                          className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                            }`}
+                        >
+                          {transaction.type === 'income' ? (
+                            <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                          ) : (
+                            <ArrowDownRight className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="font-medium text-slate-900 text-sm sm:text-base truncate">
+                            {transaction.title}
+                          </p>
+                          <p className="text-xs sm:text-sm text-slate-600">
+                            {new Date(transaction.date).toLocaleDateString('id-ID', {
+                              day: 'numeric', month: 'short', year: 'numeric',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        className={`text-sm sm:text-base font-semibold flex-shrink-0 pr-2 ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                          }`}
+                      >
+                        <span className="hidden sm:inline">
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {formatRupiah(Number(transaction.amount))}
+                        </span>
+                        <span className="sm:hidden">
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {formatRupiah(Number(transaction.amount))}
+                        </span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+
+                  {/* CONTENT: Detail Transaksi (Diperbarui) */}
+                  <AccordionContent>
+                    <div className="pt-2 pb-3 pl-10 sm:pl-14 space-y-3 text-sm text-slate-800">
+                      {/* Detail Wallet */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium w-20 flex-shrink-0">Wallet</span>
+                        {transaction.wallet ? (
+                          <Badge
+                            variant="outline"
+                            className="text-xs gap-1"
+                            style={{ borderColor: transaction.wallet.color }}
+                          >
+                            <div
+                              className="h-2 w-2 rounded-full"
+                              style={{ backgroundColor: transaction.wallet.color }}
+                            />
+                            {transaction.wallet.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-slate-500 italic text-xs">Not assigned</span>
+                        )}
+                      </div>
+
+                      {/* Detail Kategori (Baru) */}
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium w-20 flex-shrink-0">Category</span>
+                        {transaction.category?.name ? (
+                          <Badge variant="secondary">{transaction.category.name}</Badge>
+                        ) : (
+                          <span className="text-slate-500 italic text-xs">Uncategorized</span>
+                        )}
+                      </div>
+
+                      {/* Detail Deskripsi (Baru) */}
+                      {transaction.note && (
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium w-20 flex-shrink-0">Note</span>
+                          <p className="text-slate-600 text-xs mt-0.5">
+                            {transaction.note}
+                          </p>
+                        </div>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-900 text-sm sm:text-base truncate">
-                        {transaction.title}
-                      </p>
-                      <p className="text-xs sm:text-sm text-slate-600">
-                        {new Date(transaction.date).toLocaleDateString('en-US', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <div
-                    className={`text-sm sm:text-lg font-semibold flex-shrink-0 ${
-                      transaction.type === 'income'
-                        ? 'text-green-600'
-                        : 'text-red-600'
-                    }`}
-                  >
-                    <span className="hidden sm:inline">
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {formatRupiah(Number(transaction.amount)).replace('Rp', 'Rp ')}
-                    </span>
-                    <span className="sm:hidden">
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {(Number(transaction.amount) / 1000).toFixed(0)}k
-                    </span>
-                  </div>
-                </div>
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           )}
         </CardContent>
       </Card>

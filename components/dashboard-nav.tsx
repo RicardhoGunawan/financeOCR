@@ -3,12 +3,12 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
-import { 
-  LayoutDashboard, 
-  Receipt, 
-  Tags, 
-  BarChart3, 
-  ScanLine, 
+import {
+  LayoutDashboard,
+  Receipt,
+  Tags,
+  BarChart3,
+  ScanLine,
   LogOut,
   X,
   Wallet,
@@ -17,6 +17,17 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
@@ -39,6 +50,11 @@ const navItems = [
     title: 'Categories',
     href: '/dashboard/categories',
     icon: Tags,
+  },
+  {
+    title: 'Wallets',
+    href: '/dashboard/wallets',
+    icon: Wallet,
   },
   {
     title: 'Budgets',
@@ -85,13 +101,14 @@ export function DashboardNav({ onClose }: DashboardNavProps) {
     localStorage.setItem('sidebar-collapsed', JSON.stringify(newState));
   };
 
-  const handleSignOut = async () => {
-    const confirmLogout = window.confirm("Are you sure you want to logout?");
-    if (!confirmLogout) return;
+  const [openLogoutDialog, setOpenLogoutDialog] = useState(false);
 
+  const handleSignOut = async () => {
     await signOut();
-    setTimeout(() => router.push('/'), 100);
+    setOpenLogoutDialog(false);
+    setTimeout(() => router.push('/auth'), 300);
   };
+
 
   const handleNavClick = (href: string) => {
     router.push(href);
@@ -125,7 +142,7 @@ export function DashboardNav({ onClose }: DashboardNavProps) {
             </div>
           </div>
         )}
-        
+
         {isCollapsed && (
           <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0 mx-auto">
             <Wallet className="text-white font-bold text-sm sm:text-lg" />
@@ -190,19 +207,43 @@ export function DashboardNav({ onClose }: DashboardNavProps) {
         'border-t border-slate-800 transition-all duration-300',
         isCollapsed ? 'p-2 sm:p-3' : 'p-3 sm:p-4'
       )}>
-        <Button
-          onClick={handleSignOut}
-          className={cn(
-            'transition-all duration-200 bg-red-600/10 text-red-400 border border-red-600/30 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95',
-            isCollapsed 
-              ? 'w-12 h-12 p-0 flex items-center justify-center rounded-xl' 
-              : 'w-full justify-start gap-3 rounded-xl font-medium'
-          )}
-          title={isCollapsed ? 'Logout' : undefined}
-        >
-          <LogOut className="h-5 w-5" />
-          {!isCollapsed && <span>Logout</span>}
-        </Button>
+        <AlertDialog open={openLogoutDialog} onOpenChange={setOpenLogoutDialog}>
+          <AlertDialogTrigger asChild>
+            <Button
+              className={cn(
+                'transition-all duration-200 bg-red-600/10 text-red-400 border border-red-600/30 hover:bg-red-600 hover:text-white hover:border-red-600 active:scale-95',
+                isCollapsed
+                  ? 'w-12 h-12 p-0 flex items-center justify-center rounded-xl'
+                  : 'w-full justify-start gap-3 rounded-xl font-medium'
+              )}
+              title={isCollapsed ? 'Logout' : undefined}
+            >
+              <LogOut className="h-5 w-5" />
+              {!isCollapsed && <span>Logout</span>}
+            </Button>
+          </AlertDialogTrigger>
+
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+              <AlertDialogDescription>
+                You’ll be signed out and redirected to the login page.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleSignOut}
+                className="bg-red-600 text-white hover:bg-red-700"
+              >
+                Logout
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

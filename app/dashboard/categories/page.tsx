@@ -25,6 +25,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Edit, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+
+
 
 export default function CategoriesPage() {
   const { user } = useAuth();
@@ -131,8 +134,6 @@ export default function CategoriesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this category?')) return;
-
     try {
       const { error } = await supabase.from('categories').delete().eq('id', id);
 
@@ -307,14 +308,22 @@ export default function CategoriesPage() {
                       >
                         <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9"
-                        onClick={() => handleDelete(category.id)}
+                      <ConfirmDialog
+                        title="Are you sure?"
+                        description="This action will permanently remove the selected data from the system. Please confirm to continue."
+                        onConfirm={() => handleDelete(transaction)}
+                        confirmText="Delete"
+                        isDestructive={true} // This will apply the red style to the delete button
                       >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-                      </Button>
+                        {/* This is the trigger element (children) */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 sm:h-10 sm:w-10"
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                        </Button>
+                      </ConfirmDialog>
                     </div>
                   </div>
                 ))}
@@ -368,14 +377,22 @@ export default function CategoriesPage() {
                       >
                         <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 sm:h-9 sm:w-9"
-                        onClick={() => handleDelete(category.id)}
+                      <ConfirmDialog
+                        title="Are you sure?"
+                        description="This action will permanently remove the selected data from the system. Please confirm to continue."
+                        onConfirm={() => handleDelete(transaction)}
+                        confirmText="Delete"
+                        isDestructive={true} // This will apply the red style to the delete button
                       >
-                        <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-                      </Button>
+                        {/* This is the trigger element (children) */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 sm:h-10 sm:w-10"
+                        >
+                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                        </Button>
+                      </ConfirmDialog>
                     </div>
                   </div>
                 ))}

@@ -5,10 +5,44 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export type Wallet = {
+  id: number;
+  user_id: string;
+  name: string;
+  type: 'cash' | 'bank' | 'e-wallet' | 'credit-card' | 'investment' | 'other';
+  balance: number;
+  currency: string;
+  icon: string | null;
+  color: string | null;
+  description: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WalletWithStats = Wallet & {
+  transaction_count: number;
+  total_income: number;
+  total_expense: number;
+};
+
+export type WalletTransfer = {
+  id: number;
+  user_id: string;
+  from_wallet_id: number;
+  to_wallet_id: number;
+  amount: number;
+  note: string | null;
+  created_at: string;
+  from_wallet?: Wallet;
+  to_wallet?: Wallet;
+};
+
 export type Transaction = {
   id: number;
   user_id: string;
   category_id: number | null;
+  wallet_id: number | null;
   title: string;
   amount: number;
   type: 'income' | 'expense';
@@ -18,6 +52,7 @@ export type Transaction = {
   created_at: string;
   updated_at: string;
   category?: Category;
+  wallet?: Wallet;
 };
 
 export type Category = {

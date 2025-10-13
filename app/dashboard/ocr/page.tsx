@@ -40,9 +40,13 @@ export default function OcrPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [selectedWallet, setSelectedWallet] = useState<string>('');
+
   useEffect(() => {
     if (user) {
       loadCategories();
+      loadWallets();
     }
 
     return () => {
@@ -63,6 +67,14 @@ export default function OcrPage() {
     } catch (error) {
       console.error('Error loading categories:', error);
     }
+  };
+  const loadWallets = async () => {
+    const { data } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', user?.id)
+      .eq('is_active', true);
+    setWallets(data || []);
   };
 
   const stopCamera = () => {
@@ -157,6 +169,8 @@ export default function OcrPage() {
           category_id: selectedCategory ? parseInt(selectedCategory) : null,
           note: ocrResult.description,
           source: 'ocr',
+          wallet_id: selectedWallet ? parseInt(selectedWallet) : null,
+
         },
       ]);
 
@@ -381,6 +395,21 @@ export default function OcrPage() {
                                 {category.name}
                               </SelectItem>
                             ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Wallet</Label>
+                      <Select value={selectedWallet} onValueChange={setSelectedWallet}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="choose wallet" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {wallets.map((wallet) => (
+                            <SelectItem key={wallet.id} value={wallet.id.toString()}>
+                              {wallet.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
