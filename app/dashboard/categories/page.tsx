@@ -311,7 +311,7 @@ export default function CategoriesPage() {
                       <ConfirmDialog
                         title="Are you sure?"
                         description="This action will permanently remove the selected data from the system. Please confirm to continue."
-                        onConfirm={() => handleDelete(transaction)}
+                        onConfirm={() => handleDelete(category.id)}
                         confirmText="Delete"
                         isDestructive={true} // This will apply the red style to the delete button
                       >
