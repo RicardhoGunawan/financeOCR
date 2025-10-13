@@ -23,21 +23,21 @@ import {
 import Link from 'next/link';
 
 export default function Home() {
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
-  const videoRef = useRef(null);
+  // const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  // const videoRef = useRef(null);
   const sectionRef = useRef(null);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && videoRef.current) {
-            videoRef.current.play();
-          }
-        });
-      },
-      { threshold: 0.5 }
-    );
+    // const observer = new IntersectionObserver(
+    //   (entries) => {
+    //     entries.forEach((entry) => {
+    //       if (entry.isIntersecting && videoRef.current) {
+    //         videoRef.current.play();
+    //       }
+    //     });
+    //   },
+    //   { threshold: 0.5 }
+    // );
 
     if (sectionRef.current) {
       observer.observe(sectionRef.current);
