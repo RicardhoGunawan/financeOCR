@@ -47,8 +47,7 @@ export default function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] =
     useState<TransactionWithWallet | null>(null);
   const [wallets, setWallets] = useState<any[]>([]);
-  const [deleteTransaction, setDeleteTransaction] =
-    useState<TransactionWithWallet | null>(null);
+
 
   const [formData, setFormData] = useState({
     title: '',
@@ -268,7 +267,6 @@ export default function TransactionsPage() {
       toast.success('Transaction deleted successfully');
       loadTransactions();
       loadWallets();
-      setDeleteTransaction(null);
     } catch (error) {
       console.error('Error deleting transaction:', error);
       toast.error('Failed to delete transaction');
@@ -302,10 +300,7 @@ export default function TransactionsPage() {
     });
   };
 
-  const columns = createColumns(
-    openEditDialog,
-    (transaction) => setDeleteTransaction(transaction)
-  );
+  const columns = createColumns(openEditDialog, handleDelete);
 
   if (loading) {
     return (
@@ -532,21 +527,6 @@ export default function TransactionsPage() {
           <DataTable columns={columns} data={transactions} />
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation Dialog */}
-      {deleteTransaction && (
-        <ConfirmDialog
-          title="Delete Transaction"
-          description="Are you sure you want to delete this transaction? This action cannot be undone and will update your wallet balance."
-          onConfirm={() => handleDelete(deleteTransaction)}
-          confirmText="Delete"
-          isDestructive={true}
-          open={!!deleteTransaction}
-          onOpenChange={(open) => !open && setDeleteTransaction(null)}
-        >
-          <div />
-        </ConfirmDialog>
-      )}
     </div>
   );
 }
