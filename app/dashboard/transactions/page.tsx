@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase, Transaction, Category } from '@/lib/supabase';
+import { supabase, Category } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,10 +23,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowUpRight, ArrowDownRight, Trash2, Edit, Wallet } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { DataTable } from './data-table';
+import { createColumns, TransactionWithWallet } from './columns';
 
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -37,22 +38,17 @@ const formatRupiah = (amount: number) => {
   }).format(amount);
 };
 
-type TransactionWithWallet = Transaction & {
-  wallet?: {
-    id: number;
-    name: string;
-    color: string;
-  };
-};
-
 export default function TransactionsPage() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<TransactionWithWallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTransaction, setEditingTransaction] = useState<TransactionWithWallet | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<TransactionWithWallet | null>(null);
   const [wallets, setWallets] = useState<any[]>([]);
+  const [deleteTransaction, setDeleteTransaction] =
+    useState<TransactionWithWallet | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -76,11 +72,13 @@ export default function TransactionsPage() {
     try {
       const { data, error } = await supabase
         .from('transactions')
-        .select(`
+        .select(
+          `
           *,
           category:categories(*),
           wallet:wallets(id, name, color)
-        `)
+        `
+        )
         .eq('user_id', user?.id)
         .order('date', { ascending: false });
 
@@ -149,7 +147,9 @@ export default function TransactionsPage() {
         amount: amount,
         type: formData.type,
         date: formData.date,
-        category_id: formData.category_id ? parseInt(formData.category_id) : null,
+        category_id: formData.category_id
+          ? parseInt(formData.category_id)
+          : null,
         note: formData.note || null,
         wallet_id: walletId,
         source: 'manual' as const,
@@ -170,9 +170,10 @@ export default function TransactionsPage() {
             .single();
 
           if (oldWallet) {
-            const reversedBalance = oldType === 'income'
-              ? oldWallet.balance - oldAmount
-              : oldWallet.balance + oldAmount;
+            const reversedBalance =
+              oldType === 'income'
+                ? oldWallet.balance - oldAmount
+                : oldWallet.balance + oldAmount;
 
             await supabase
               .from('wallets')
@@ -190,9 +191,10 @@ export default function TransactionsPage() {
         if (error) throw error;
 
         // Apply new transaction to new wallet
-        const newBalance = formData.type === 'income'
-          ? walletData.balance + amount
-          : walletData.balance - amount;
+        const newBalance =
+          formData.type === 'income'
+            ? walletData.balance + amount
+            : walletData.balance - amount;
 
         await supabase
           .from('wallets')
@@ -209,9 +211,10 @@ export default function TransactionsPage() {
         if (error) throw error;
 
         // Update wallet balance
-        const newBalance = formData.type === 'income'
-          ? walletData.balance + amount
-          : walletData.balance - amount;
+        const newBalance =
+          formData.type === 'income'
+            ? walletData.balance + amount
+            : walletData.balance - amount;
 
         await supabase
           .from('wallets')
@@ -232,7 +235,6 @@ export default function TransactionsPage() {
   };
 
   const handleDelete = async (transaction: TransactionWithWallet) => {
-
     try {
       // Reverse the transaction on the wallet
       if (transaction.wallet_id) {
@@ -243,9 +245,10 @@ export default function TransactionsPage() {
           .single();
 
         if (wallet) {
-          const newBalance = transaction.type === 'income'
-            ? wallet.balance - Number(transaction.amount)
-            : wallet.balance + Number(transaction.amount);
+          const newBalance =
+            transaction.type === 'income'
+              ? wallet.balance - Number(transaction.amount)
+              : wallet.balance + Number(transaction.amount);
 
           await supabase
             .from('wallets')
@@ -265,6 +268,7 @@ export default function TransactionsPage() {
       toast.success('Transaction deleted successfully');
       loadTransactions();
       loadWallets();
+      setDeleteTransaction(null);
     } catch (error) {
       console.error('Error deleting transaction:', error);
       toast.error('Failed to delete transaction');
@@ -298,6 +302,11 @@ export default function TransactionsPage() {
     });
   };
 
+  const columns = createColumns(
+    openEditDialog,
+    (transaction) => setDeleteTransaction(transaction)
+  );
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -311,7 +320,9 @@ export default function TransactionsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Transactions</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            Transactions
+          </h1>
           <p className="text-sm sm:text-base text-slate-600 mt-1">
             Manage your income and expenses across all wallets
           </p>
@@ -340,14 +351,21 @@ export default function TransactionsPage() {
                   : 'Enter the transaction details below'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+            <form
+              onSubmit={handleSubmit}
+              className="flex flex-col flex-1 overflow-hidden"
+            >
               <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4">
                 <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="title" className="text-xs sm:text-sm">Title</Label>
+                  <Label htmlFor="title" className="text-xs sm:text-sm">
+                    Title
+                  </Label>
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     placeholder="e.g., Monthly groceries"
                     required
                     className="text-sm h-9 sm:h-10"
@@ -356,20 +374,26 @@ export default function TransactionsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="amount" className="text-xs sm:text-sm">Amount</Label>
+                    <Label htmlFor="amount" className="text-xs sm:text-sm">
+                      Amount
+                    </Label>
                     <Input
                       id="amount"
                       type="number"
                       step="1"
                       value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, amount: e.target.value })
+                      }
                       placeholder="0"
                       required
                       className="text-sm h-9 sm:h-10"
                     />
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="type" className="text-xs sm:text-sm">Type</Label>
+                    <Label htmlFor="type" className="text-xs sm:text-sm">
+                      Type
+                    </Label>
                     <Select
                       value={formData.type}
                       onValueChange={(value: 'income' | 'expense') =>
@@ -388,7 +412,9 @@ export default function TransactionsPage() {
                 </div>
 
                 <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="wallet" className="text-xs sm:text-sm">Wallet</Label>
+                  <Label htmlFor="wallet" className="text-xs sm:text-sm">
+                    Wallet
+                  </Label>
                   <Select
                     value={formData.wallet_id}
                     onValueChange={(value) =>
@@ -417,18 +443,24 @@ export default function TransactionsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="date" className="text-xs sm:text-sm">Date</Label>
+                    <Label htmlFor="date" className="text-xs sm:text-sm">
+                      Date
+                    </Label>
                     <Input
                       id="date"
                       type="date"
                       value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, date: e.target.value })
+                      }
                       required
                       className="text-sm h-9 sm:h-10"
                     />
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="category" className="text-xs sm:text-sm">Category</Label>
+                    <Label htmlFor="category" className="text-xs sm:text-sm">
+                      Category
+                    </Label>
                     <Select
                       value={formData.category_id}
                       onValueChange={(value) =>
@@ -442,7 +474,10 @@ export default function TransactionsPage() {
                         {categories
                           .filter((cat) => cat.type === formData.type)
                           .map((category) => (
-                            <SelectItem key={category.id} value={category.id.toString()}>
+                            <SelectItem
+                              key={category.id}
+                              value={category.id.toString()}
+                            >
                               {category.name}
                             </SelectItem>
                           ))}
@@ -452,11 +487,15 @@ export default function TransactionsPage() {
                 </div>
 
                 <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="note" className="text-xs sm:text-sm">Note (optional)</Label>
+                  <Label htmlFor="note" className="text-xs sm:text-sm">
+                    Note (optional)
+                  </Label>
                   <Textarea
                     id="note"
                     value={formData.note}
-                    onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, note: e.target.value })
+                    }
                     placeholder="Add additional details..."
                     className="text-sm resize-none min-h-[80px] sm:min-h-[100px]"
                   />
@@ -484,114 +523,30 @@ export default function TransactionsPage() {
         </Dialog>
       </div>
 
-      {/* Transactions List */}
+      {/* Data Table */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">All Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          {transactions.length === 0 ? (
-            <p className="text-slate-600 text-center py-8 text-sm sm:text-base">
-              No transactions yet. Add your first transaction!
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {transactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-slate-200 rounded-lg p-3 sm:p-4 hover:border-slate-300 transition-colors gap-3"
-                >
-                  <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-                    <div
-                      className={`h-10 w-10 sm:h-12 sm:w-12 rounded-full flex items-center justify-center flex-shrink-0 ${transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
-                        }`}
-                    >
-                      {transaction.type === 'income' ? (
-                        <ArrowUpRight className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
-                      ) : (
-                        <ArrowDownRight className="h-5 w-5 sm:h-6 sm:w-6 text-red-600" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-semibold text-slate-900 text-sm sm:text-base truncate">
-                        {transaction.title}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-600">
-                        <span>
-                          {new Date(transaction.date).toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </span>
-                        {transaction.category && (
-                          <>
-                            <span className="hidden sm:inline">•</span>
-                            <span>{transaction.category.name}</span>
-                          </>
-                        )}
-                        {transaction.wallet && (
-                          <>
-                            <span className="hidden sm:inline">•</span>
-                            <Badge
-                              variant="outline"
-                              className="gap-1 text-xs"
-                              style={{ borderColor: transaction.wallet.color }}
-                            >
-                              <div
-                                className="h-2 w-2 rounded-full"
-                                style={{ backgroundColor: transaction.wallet.color }}
-                              />
-                              {transaction.wallet.name}
-                            </Badge>
-                          </>
-                        )}
-                        <span className="hidden sm:inline">•</span>
-                        <span className="capitalize">{transaction.source}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-                    <div
-                      className={`text-base sm:text-xl font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                        }`}
-                    >
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {formatRupiah(Number(transaction.amount))}
-                    </div>
-                    <div className="flex gap-1 sm:gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 sm:h-10 sm:w-10"
-                        onClick={() => openEditDialog(transaction)}
-                      >
-                        <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                      <ConfirmDialog
-                        title="Are you sure?"
-                        description="This action will permanently remove the selected data from the system. Please confirm to continue."
-                        onConfirm={() => handleDelete(transaction)}
-                        confirmText="Delete"
-                        isDestructive={true} // This will apply the red style to the delete button
-                      >
-                        {/* This is the trigger element (children) */}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 sm:h-10 sm:w-10"
-                        >
-                          <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
-                        </Button>
-                      </ConfirmDialog>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <DataTable columns={columns} data={transactions} />
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteTransaction && (
+        <ConfirmDialog
+          title="Delete Transaction"
+          description="Are you sure you want to delete this transaction? This action cannot be undone and will update your wallet balance."
+          onConfirm={() => handleDelete(deleteTransaction)}
+          confirmText="Delete"
+          isDestructive={true}
+          open={!!deleteTransaction}
+          onOpenChange={(open) => !open && setDeleteTransaction(null)}
+        >
+          <div />
+        </ConfirmDialog>
+      )}
     </div>
   );
 }

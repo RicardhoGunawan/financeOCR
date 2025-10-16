@@ -368,7 +368,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Recent Transactions */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl">Recent Transactions</CardTitle>
@@ -386,9 +385,10 @@ export default function DashboardPage() {
                   value={String(transaction.id)}
                   className="border-b last:border-b-0"
                 >
-                  {/* TRIGGER: Ringkasan Transaksi (Tetap Sama) */}
+                  {/* === TRIGGER === */}
                   <AccordionTrigger className="hover:no-underline py-3">
-                    <div className="flex items-center justify-between w-full gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full gap-2 sm:gap-3">
+                      {/* Kiri: Icon + Title + Date */}
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                         <div
                           className={`h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${transaction.type === 'income' ? 'bg-green-100' : 'bg-red-100'
@@ -406,20 +406,22 @@ export default function DashboardPage() {
                           </p>
                           <p className="text-xs sm:text-sm text-slate-600">
                             {new Date(transaction.date).toLocaleDateString('id-ID', {
-                              day: 'numeric', month: 'short', year: 'numeric',
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
                             })}
                           </p>
                         </div>
                       </div>
+
+                      {/* Kanan: Nominal */}
                       <div
-                        className={`text-sm sm:text-base font-semibold flex-shrink-0 pr-2 ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                        className={`text-sm sm:text-base font-semibold flex-shrink-0 pr-2 text-right ${transaction.type === 'income'
+                            ? 'text-green-600'
+                            : 'text-red-600'
                           }`}
                       >
-                        <span className="hidden sm:inline">
-                          {transaction.type === 'income' ? '+' : '-'}
-                          {formatRupiah(Number(transaction.amount))}
-                        </span>
-                        <span className="sm:hidden">
+                        <span>
                           {transaction.type === 'income' ? '+' : '-'}
                           {formatRupiah(Number(transaction.amount))}
                         </span>
@@ -427,16 +429,18 @@ export default function DashboardPage() {
                     </div>
                   </AccordionTrigger>
 
-                  {/* CONTENT: Detail Transaksi (Diperbarui) */}
+                  {/* === CONTENT === */}
                   <AccordionContent>
                     <div className="pt-2 pb-3 pl-10 sm:pl-14 space-y-3 text-sm text-slate-800">
-                      {/* Detail Wallet */}
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium w-20 flex-shrink-0">Wallet</span>
+                      {/* Wallet */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium w-20 flex-shrink-0 text-xs sm:text-sm">
+                          Wallet
+                        </span>
                         {transaction.wallet ? (
                           <Badge
                             variant="outline"
-                            className="text-xs gap-1"
+                            className="text-[10px] sm:text-xs gap-1 px-2 py-1"
                             style={{ borderColor: transaction.wallet.color }}
                           >
                             <div
@@ -446,25 +450,38 @@ export default function DashboardPage() {
                             {transaction.wallet.name}
                           </Badge>
                         ) : (
-                          <span className="text-slate-500 italic text-xs">Not assigned</span>
+                          <span className="text-slate-500 italic text-xs">
+                            Not assigned
+                          </span>
                         )}
                       </div>
 
-                      {/* Detail Kategori (Baru) */}
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium w-20 flex-shrink-0">Category</span>
+                      {/* Category */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium w-20 flex-shrink-0 text-xs sm:text-sm">
+                          Category
+                        </span>
                         {transaction.category?.name ? (
-                          <Badge variant="secondary">{transaction.category.name}</Badge>
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] sm:text-xs px-2 py-1"
+                          >
+                            {transaction.category.name}
+                          </Badge>
                         ) : (
-                          <span className="text-slate-500 italic text-xs">Uncategorized</span>
+                          <span className="text-slate-500 italic text-xs">
+                            Uncategorized
+                          </span>
                         )}
                       </div>
 
-                      {/* Detail Deskripsi (Baru) */}
+                      {/* Note */}
                       {transaction.note && (
-                        <div className="flex items-start gap-2">
-                          <span className="font-medium w-20 flex-shrink-0">Note</span>
-                          <p className="text-slate-600 text-xs mt-0.5">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                          <span className="font-medium w-20 flex-shrink-0 text-xs sm:text-sm">
+                            Note
+                          </span>
+                          <p className="text-slate-600 text-xs sm:text-sm mt-0.5 sm:mt-0">
                             {transaction.note}
                           </p>
                         </div>
