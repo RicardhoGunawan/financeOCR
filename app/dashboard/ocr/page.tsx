@@ -135,17 +135,6 @@ export default function OcrPage() {
 
       setOcrResult(result.data);
 
-      await supabase.from('ocr_records').insert([
-        {
-          user_id: user?.id,
-          file_name: file.name,
-          file_url: null,
-          extracted_text: result.data.extracted_text,
-          parsed_amount: result.data.amount,
-          parsed_date: result.data.date,
-        },
-      ]);
-
       toast.success('Document processed successfully!');
     } catch (error: any) {
       console.error('OCR Error:', error);
