@@ -198,14 +198,16 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
 
         case 'top_category': {
             const targetTransactions = filters.type === 'income' ? incomes : expenses;
-            const byCategory: Record<string, number> = expenses.reduce((acc, t) => {
+            const byCategory = targetTransactions.reduce((acc, t) => {
                 const catName = t.category?.name || 'Lainnya';
                 acc[catName] = (acc[catName] || 0) + Number(t.amount);
                 return acc;
-            }, {});
+            }, {} as Record<string, number>);
 
-            const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-            const top5 = sorted.slice(0, 5);
+            // BARU
+            const sorted = Object.entries(byCategory).sort(
+                (a: [string, number], b: [string, number]) => b[1] - a[1]
+            ); const top5 = sorted.slice(0, 5);
 
             if (top5.length === 0) return 'Tidak ada data kategori.';
 
@@ -296,7 +298,7 @@ async function generateAIResponse(question: string, transactions: any[]): Promis
     }, {} as Record<string, number>);
 
     const topCategories = Object.entries(byCategory)
-        .sort((a, b) => b[1] - a[1])
+        .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
         .slice(0, 5)
         .map(([cat, amount]) => ({ category: cat, amount }));
 
