@@ -205,9 +205,11 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
             }, {} as Record<string, number>);
 
             // BARU
-            const sorted = Object.entries(byCategory).sort(
-                (a: [string, number], b: [string, number]) => b[1] - a[1]
-            ); const top5 = sorted.slice(0, 5);
+            // BARU (Solusi Tepat)
+            const sorted = (Object.entries(byCategory) as [string, number][]).sort(
+                (a, b) => b[1] - a[1]
+            );
+            const top5 = sorted.slice(0, 5);
 
             if (top5.length === 0) return 'Tidak ada data kategori.';
 
@@ -297,8 +299,9 @@ async function generateAIResponse(question: string, transactions: any[]): Promis
         return acc;
     }, {} as Record<string, number>);
 
-    const topCategories = Object.entries(byCategory)
-        .sort((a: [string, number], b: [string, number]) => b[1] - a[1])
+    // BARU (Solusi Tepat)
+    const topCategories = (Object.entries(byCategory) as [string, number][])
+        .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
         .map(([cat, amount]) => ({ category: cat, amount }));
 
