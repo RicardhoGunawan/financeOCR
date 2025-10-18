@@ -113,7 +113,7 @@ export default function ProfilePage() {
             return data.publicUrl;
         } catch (error) {
             console.error('Error uploading avatar:', error);
-            toast.error('Gagal mengunggah foto profil.');
+            toast.error('Failed to upload profile photo.');
             return null;
         }
     };
@@ -136,37 +136,37 @@ export default function ProfilePage() {
                 .eq('user_id', user.id);
             if (error) throw error;
             await refreshProfile();
-            toast.success('Profil berhasil diperbarui!');
+            toast.success('Profile updated successfully!');
         } catch (error) {
             console.error('Error saving profile:', error);
-            toast.error('Gagal menyimpan perubahan profil.');
+            toast.error('Failed to save profile changes.');
         } finally {
             setSaving(false);
         }
     };
     const handleCancel = () => {
         if (!profile) return;
-        setFullName(initialProfile.full_name || '');
-        setCurrency(initialProfile.currency || 'Rp');
-        setAvatarPreview(initialProfile.avatar_url || '');
+        setFullName(profile.full_name || '');
+        setCurrency(profile.currency || 'Rp');  
+        setAvatarPreview(profile.avatar_url || '');
         setAvatarFile(null);
-        toast.info('Perubahan dibatalkan.');
+        toast.info('Changes cancelled.');
     };
 
 
     // --- HANDLER BARU UNTUK GANTI PASSWORD ---
     const handleChangePassword = async () => {
         if (newPassword.length < 6) {
-            toast.error('Password baru harus minimal 6 karakter.');
+            toast.error('New password must be at least 6 characters.');
             return;
         }
         if (newPassword !== confirmPassword) {
-            toast.error('Password baru dan konfirmasi tidak cocok.');
+            toast.error('New password and confirmation do not match.');
             return;
         }
 
         if (!user?.email) {
-            toast.error('Email pengguna tidak ditemukan.');
+            toast.error('User email not found.');
             return;
         }
 
@@ -179,7 +179,7 @@ export default function ProfilePage() {
             });
 
             if (signInError) {
-                throw new Error('Password lama salah. Silakan coba lagi.');
+                throw new Error('The old password is incorrect. Please try again.');
             }
 
             // ✅ Jika berhasil login ulang, baru ubah password
@@ -189,12 +189,12 @@ export default function ProfilePage() {
 
             if (error) throw error;
 
-            toast.success('Password berhasil diperbarui!');
+            toast.success('Password updated successfully!');
             setOldPassword('');
             setNewPassword('');
             setConfirmPassword('');
         } catch (error: any) {
-            toast.error(error.message || 'Gagal memperbarui password.');
+            toast.error(error.message || 'Failed to update password.');
         } finally {
             setSavingPassword(false);
         }
@@ -430,7 +430,7 @@ export default function ProfilePage() {
                                 type="password"
                                 value={oldPassword}
                                 onChange={(e) => setOldPassword(e.target.value)}
-                                placeholder="Masukkan password lama Anda"
+                                placeholder="Enter your old password"
                             />
                         </div>
                         <div className="space-y-2">
@@ -440,7 +440,7 @@ export default function ProfilePage() {
                                 type="password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                placeholder="Minimal 6 karakter"
+                                placeholder="Minimum 6 characters"
                             />
                         </div>
                         <div className="space-y-2">
@@ -450,7 +450,7 @@ export default function ProfilePage() {
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                placeholder="Ketik ulang password baru Anda"
+                                placeholder="Retype your new password"
                             />
                         </div>
                     </CardContent>
