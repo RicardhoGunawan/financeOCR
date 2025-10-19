@@ -126,7 +126,7 @@ export function DashboardNav({ onClose }: DashboardNavProps) {
   const handleSignOut = async () => {
     await signOut();
     setOpenLogoutDialog(false);
-    setTimeout(() => router.push('/auth'), 300);
+    setTimeout(() => router.push('/auth?success=logout_success'));
   };
 
   const handleNavClick = (href: string) => {

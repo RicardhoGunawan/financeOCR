@@ -54,7 +54,7 @@ export async function GET(request: Request) {
             console.log('✅ Session created successfully');
             console.log('👤 User:', data.session.user.email);
             // Redirect pengguna ke halaman tujuan ('/dashboard' atau 'next' URL)
-            return NextResponse.redirect(`${requestUrl.origin}${next}`);
+            return NextResponse.redirect(`${requestUrl.origin}${next}?success=google_login`);
         }
     }
 

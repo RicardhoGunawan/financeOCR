@@ -10,7 +10,7 @@ type AuthContextType = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
-  signInWithGoogle: () => Promise<void>; // 👈 Tambahkan ini
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 };
@@ -42,14 +42,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Fungsi untuk mengambil atau menunggu profil dibuat
   const getOrWaitForProfile = async (authUser: User, retries = 5) => {
+    console.log('🔄 Getting or waiting for profile...');
     for (let i = 0; i < retries; i++) {
+      console.log(`   Attempt ${i + 1}/${retries}`);
       const profile = await fetchProfile(authUser);
-      if (profile) return profile;
+      if (profile) {
+        console.log('✅ Profile found!');
+        return profile;
+      }
 
       // Tunggu sebentar sebelum retry (karena trigger mungkin belum selesai)
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
+    console.log('⚠️ Profile not found after retries, creating manually...');
     // Jika setelah retry masih belum ada, buat manual sebagai fallback
     const fullName = authUser.user_metadata?.full_name ||
       authUser.user_metadata?.name ||
@@ -68,10 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (!profileError && newProfile) {
+      console.log('✅ Profile created successfully');
       setProfile(newProfile);
       return newProfile;
     }
 
+    console.error('❌ Failed to create profile:', profileError);
     return null;
   };
 
@@ -82,25 +90,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const authUser = session?.user ?? null;
+      try {
+        console.log('🔍 Starting auth check...');
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('📦 Session:', session ? 'Found' : 'Not found');
+        
+        if (!mounted) return;
+        
+        const authUser = session?.user ?? null;
+        console.log('👤 User:', authUser?.email || 'No user');
+        setUser(authUser);
 
-      setUser(authUser);
-
-      if (authUser) {
-        await getOrWaitForProfile(authUser);
-      } else {
-        setProfile(null);
+        if (authUser) {
+          console.log('🔄 Fetching profile...');
+          await getOrWaitForProfile(authUser);
+          console.log('✅ Profile loaded');
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('❌ Error initializing auth:', error);
+      } finally {
+        if (mounted) {
+          console.log('✅ Auth check complete, setting loading = false');
+          setLoading(false);
+        }
       }
-
-      setLoading(false);
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        console.log('🔄 Auth state changed:', _event);
+        if (!mounted) return;
+        
         const authUser = session?.user ?? null;
         setUser(authUser);
 
@@ -109,12 +136,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setProfile(null);
         }
-
-        if (loading) setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -150,7 +178,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
-  // 👈 Fungsi Google Sign-In dengan PKCE
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -174,6 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
   };
 
+  // ✅ JANGAN tampilkan loading screen di sini - biarkan page yang handle
   return (
     <AuthContext.Provider
       value={{
@@ -182,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         signIn,
         signUp,
-        signInWithGoogle, // 👈 Tambahkan ke provider
+        signInWithGoogle,
         signOut,
         refreshProfile
       }}

@@ -21,11 +21,22 @@ import {
   X,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 
 export default function Home() {
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const videoRef = useRef(null);
   const sectionRef = useRef(null);
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  // ✅ Auto redirect ke dashboard jika user sudah login
+  useEffect(() => {
+    if (!loading && user) {
+      router.replace('/dashboard');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -100,11 +111,14 @@ export default function Home() {
     'Automatic categorization with AI',
     'Multi-currency support',
     'Secure cloud backup',
-    // 'Export reports to PDF/Excel',
     'Mobile responsive design',
-    // 'Dark mode support',
     'Free to get started',
   ];
+
+  // ✅ Jangan render halaman home jika user sudah login (redirect handled by useEffect)
+  if (user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 text-white overflow-hidden">

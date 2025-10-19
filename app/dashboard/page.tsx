@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/accordion"
 import { useRouter } from 'next/navigation';
 import { FinanceChatbot } from '@/components/finance-chatbot';
+import { toast } from 'sonner';
+
 
 const formatRupiah = (amount: number) => {
   return new Intl.NumberFormat('id-ID', {
@@ -74,6 +76,17 @@ export default function DashboardPage() {
     count: 0,
     activeCount: 0,
   });
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const success = searchParams.get('success');
+
+    if (success === 'google_login') {
+      toast.success('Logged in with Google successfully!');
+      // Bersihkan URL dari parameter success
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -420,8 +433,8 @@ export default function DashboardPage() {
                         {/* Kanan: Nominal */}
                         <div
                           className={`text-sm sm:text-base font-semibold flex-shrink-0 pr-2 text-right ${transaction.type === 'income'
-                              ? 'text-green-600'
-                              : 'text-red-600'
+                            ? 'text-green-600'
+                            : 'text-red-600'
                             }`}
                         >
                           <span>
