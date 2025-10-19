@@ -10,8 +10,9 @@ type AuthContextType = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signInWithGoogle: () => Promise<void>; // 👈 Tambahkan ini
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>; // 👈 1. TAMBAHKAN FUNGSI BARU INI
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,15 +32,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error && error.code !== 'PGRST116') {
       console.warn('Error fetching profile:', error.message);
-      setProfile(null); // Set null jika error
+      setProfile(null);
       return null;
     }
-    
-    setProfile(userProfile || null); // 👈 2. PASTIKAN STATE DI-UPDATE
+
+    setProfile(userProfile || null);
     return userProfile;
   };
 
-  // 👈 3. BUAT FUNGSI REFRESH YANG BISA DIAKSES PUBLIK
+  // Fungsi untuk mengambil atau menunggu profil dibuat
+  const getOrWaitForProfile = async (authUser: User, retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+      const profile = await fetchProfile(authUser);
+      if (profile) return profile;
+
+      // Tunggu sebentar sebelum retry (karena trigger mungkin belum selesai)
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Jika setelah retry masih belum ada, buat manual sebagai fallback
+    const fullName = authUser.user_metadata?.full_name ||
+      authUser.user_metadata?.name ||
+      authUser.email?.split('@')[0] ||
+      'User';
+
+    const { data: newProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: authUser.id,
+        full_name: fullName,
+        avatar_url: authUser.user_metadata?.avatar_url || null,
+        currency: 'Rp',
+      })
+      .select()
+      .single();
+
+    if (!profileError && newProfile) {
+      setProfile(newProfile);
+      return newProfile;
+    }
+
+    return null;
+  };
+
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user);
@@ -48,18 +83,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      // ... (kode initAuth Anda)
       const { data: { session } } = await supabase.auth.getSession();
       const authUser = session?.user ?? null;
-      
+
       setUser(authUser);
 
       if (authUser) {
-        await fetchProfile(authUser); // Panggil fetchProfile
+        await getOrWaitForProfile(authUser);
       } else {
         setProfile(null);
       }
-      
+
       setLoading(false);
     };
 
@@ -71,20 +105,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(authUser);
 
         if (authUser) {
-          await fetchProfile(authUser); // Panggil fetchProfile
+          await getOrWaitForProfile(authUser);
         } else {
           setProfile(null);
         }
-        
+
         if (loading) setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [loading]); // Hapus 'loading' dari dependensi jika menyebabkan loop
+  }, []);
 
   const signIn = async (email: string, password: string) => {
-    // ... (kode signIn Anda)
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -93,43 +126,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    // ... (kode signUp Anda)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (!error && data.user) {
-      const { data: newProfile, error: profileError } = await supabase.from('user_profiles').insert({
-        user_id: data.user.id,
-        full_name: fullName,
-        currency: 'Rp',
-      }).select().single();
-      
+      const { data: newProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: data.user.id,
+          full_name: fullName,
+          currency: 'Rp',
+        })
+        .select()
+        .single();
+
       if (!profileError) {
-         setProfile(newProfile); 
+        setProfile(newProfile);
       }
     }
 
     return { error };
   };
 
+  // 👈 Fungsi Google Sign-In dengan PKCE
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+        skipBrowserRedirect: false,
+      },
+    });
+
+    if (error) {
+      throw error;
+    }
+  };
+
   const signOut = async () => {
-    // ... (kode signOut Anda)
     await supabase.auth.signOut();
     setProfile(null);
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        profile, 
-        loading, 
-        signIn, 
-        signUp, 
-        signOut, 
-        refreshProfile // 👈 4. MASUKKAN FUNGSI KE PROVIDER
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        signIn,
+        signUp,
+        signInWithGoogle, // 👈 Tambahkan ke provider
+        signOut,
+        refreshProfile
       }}
     >
       {children}

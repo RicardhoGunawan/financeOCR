@@ -41,12 +41,68 @@ export default function CategoriesPage() {
   });
 
   useEffect(() => {
-    if (user) {
-      loadCategories();
-      initializeDefaultCategories();
-    }
-  }, [user]);
+    // Flag untuk melacak apakah komponen masih ter-mount
+    let isMounted = true;
 
+    if (user) {
+      const loadData = async () => {
+        setLoading(true);
+
+        // Langkah 1: Selalu coba ambil data kategori yang ada
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('name');
+
+        // Jika komponen sudah unmount sebelum query selesai, hentikan eksekusi
+        if (!isMounted) return;
+
+        if (error) {
+          console.error('Error loading categories:', error);
+          toast.error('Failed to load categories');
+          setLoading(false);
+          return;
+        }
+
+        // Langkah 2: Cek apakah data ada
+        if (data && data.length > 0) {
+          // Jika ada, langsung set state dan selesai
+          setCategories(data);
+          setLoading(false);
+        } else {
+          // Jika tidak ada (data.length === 0), ini user baru.
+          // Langkah 3: Inisialisasi kategori default
+          try {
+            await initializeDefaultCategories();
+            if (!isMounted) return; // Cek lagi setelah await
+
+            // Langkah 4: Muat ulang kategori (sekarang sudah berisi data default)
+            await loadCategories();
+          } catch (initError) {
+            console.error('Error initializing:', initError);
+            toast.error('Failed to initialize default categories');
+          } finally {
+            if (isMounted) {
+              setLoading(false);
+            }
+          }
+        }
+      };
+
+      loadData();
+    }
+
+    // Cleanup function: akan dijalankan saat komponen unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [user]); // Hanya bergantung pada user
+
+  /**
+   * Fungsi ini sekarang HANYA bertugas memuat kategori dan set state.
+   * Tidak lagi mengatur loading.
+   */
   const loadCategories = async () => {
     try {
       const { data, error } = await supabase
@@ -60,21 +116,16 @@ export default function CategoriesPage() {
     } catch (error) {
       console.error('Error loading categories:', error);
       toast.error('Failed to load categories');
-    } finally {
-      setLoading(false);
     }
+    // HAPUS `finally { setLoading(false) }` dari sini
   };
 
+  /**
+   * Fungsi ini sekarang HANYA bertugas memasukkan data default.
+   * Tidak lagi mengecek atau memanggil loadCategories.
+   */
   const initializeDefaultCategories = async () => {
     try {
-      const { data: existing } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('user_id', user?.id)
-        .limit(1);
-
-      if (existing && existing.length > 0) return;
-
       const defaultCategories = [
         { name: 'Groceries', type: 'expense' },
         { name: 'Transportation', type: 'expense' },
@@ -92,10 +143,16 @@ export default function CategoriesPage() {
         user_id: user?.id,
       }));
 
-      await supabase.from('categories').insert(categoriesToInsert);
-      loadCategories();
+      const { error } = await supabase
+        .from('categories')
+        .insert(categoriesToInsert);
+
+      if (error) throw error;
+      // HAPUS `loadCategories()` dari sini
     } catch (error) {
       console.error('Error initializing categories:', error);
+      // Lempar error agar bisa ditangkap oleh `loadData`
+      throw new Error('Failed to insert default categories');
     }
   };
 
