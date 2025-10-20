@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase, type UserProfile } from './supabase';
 
@@ -22,111 +22,100 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Memoize fetch profile function
-  const fetchProfile = useCallback(async (authUser: User) => {
-    try {
-      const { data: userProfile, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('user_id', authUser.id)
-        .maybeSingle(); // ✅ Gunakan maybeSingle() untuk performa lebih baik
+  // Fungsi helper untuk mengambil profil
+  const fetchProfile = async (authUser: User) => {
+    const { data: userProfile, error } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .single();
 
-      if (error) {
-        console.warn('Error fetching profile:', error.message);
-        setProfile(null);
-        return null;
-      }
-
-      setProfile(userProfile);
-      return userProfile;
-    } catch (error) {
-      console.error('Unexpected error fetching profile:', error);
+    if (error && error.code !== 'PGRST116') {
+      console.warn('Error fetching profile:', error.message);
+      setProfile(null);
       return null;
     }
-  }, []);
 
-  // ✅ Optimasi getOrWaitForProfile dengan exponential backoff
-  const getOrWaitForProfile = useCallback(async (authUser: User, maxRetries = 4) => {
-    // Coba fetch langsung dulu
-    const existingProfile = await fetchProfile(authUser);
-    if (existingProfile) return existingProfile;
+    setProfile(userProfile || null);
+    return userProfile;
+  };
 
-    // Retry dengan exponential backoff: 200ms, 400ms, 800ms
-    for (let i = 0; i < maxRetries; i++) {
-      const delay = Math.min(200 * Math.pow(2, i), 1000); // Max 1 detik
-      await new Promise(resolve => setTimeout(resolve, delay));
-      
+  // Fungsi untuk mengambil atau menunggu profil dibuat
+  const getOrWaitForProfile = async (authUser: User, retries = 5) => {
+    console.log('🔄 Getting or waiting for profile...');
+    for (let i = 0; i < retries; i++) {
+      console.log(`   Attempt ${i + 1}/${retries}`);
       const profile = await fetchProfile(authUser);
-      if (profile) return profile;
+      if (profile) {
+        console.log('✅ Profile found!');
+        return profile;
+      }
+
+      // Tunggu sebentar sebelum retry (karena trigger mungkin belum selesai)
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    // Fallback: create profile manually
+    console.log('⚠️ Profile not found after retries, creating manually...');
+    // Jika setelah retry masih belum ada, buat manual sebagai fallback
     const fullName = authUser.user_metadata?.full_name ||
       authUser.user_metadata?.name ||
       authUser.email?.split('@')[0] ||
       'User';
 
-    try {
-      const { data: newProfile, error } = await supabase
-        .from('user_profiles')
-        .upsert({ // ✅ Gunakan upsert untuk menghindari conflict
-          user_id: authUser.id,
-          full_name: fullName,
-          avatar_url: authUser.user_metadata?.avatar_url || null,
-          currency: 'Rp',
-        }, {
-          onConflict: 'user_id',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
+    const { data: newProfile, error: profileError } = await supabase
+      .from('user_profiles')
+      .insert({
+        user_id: authUser.id,
+        full_name: fullName,
+        avatar_url: authUser.user_metadata?.avatar_url || null,
+        currency: 'Rp',
+      })
+      .select()
+      .single();
 
-      if (!error && newProfile) {
-        setProfile(newProfile);
-        return newProfile;
-      }
-    } catch (error) {
-      console.error('Failed to create profile:', error);
+    if (!profileError && newProfile) {
+      console.log('✅ Profile created successfully');
+      setProfile(newProfile);
+      return newProfile;
     }
 
+    console.error('❌ Failed to create profile:', profileError);
     return null;
-  }, [fetchProfile]);
+  };
 
-  // ✅ Memoize refresh function
-  const refreshProfile = useCallback(async () => {
+  const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user);
     }
-  }, [user, fetchProfile]);
+  };
 
-  // ✅ Optimasi auth initialization
   useEffect(() => {
     let mounted = true;
-    let profileFetchPromise: Promise<any> | null = null;
 
     const initAuth = async () => {
       try {
-        // ✅ Parallel fetch: ambil session dan setup listener bersamaan
-        const [{ data: { session } }] = await Promise.all([
-          supabase.auth.getSession(),
-        ]);
+        console.log('🔍 Starting auth check...');
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('📦 Session:', session ? 'Found' : 'Not found');
         
         if (!mounted) return;
         
         const authUser = session?.user ?? null;
+        console.log('👤 User:', authUser?.email || 'No user');
         setUser(authUser);
 
         if (authUser) {
-          // ✅ Fetch profile tanpa blocking loading state
-          profileFetchPromise = getOrWaitForProfile(authUser);
+          console.log('🔄 Fetching profile...');
+          await getOrWaitForProfile(authUser);
+          console.log('✅ Profile loaded');
         } else {
           setProfile(null);
         }
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('❌ Error initializing auth:', error);
       } finally {
         if (mounted) {
-          // ✅ Set loading false immediately, profile fetch berjalan di background
+          console.log('✅ Auth check complete, setting loading = false');
           setLoading(false);
         }
       }
@@ -134,18 +123,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    // ✅ Setup auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
+        console.log('🔄 Auth state changed:', _event);
         if (!mounted) return;
         
         const authUser = session?.user ?? null;
         setUser(authUser);
 
-        // ✅ Optimasi: hanya fetch profile untuk event tertentu
-        if (authUser && (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED')) {
-          getOrWaitForProfile(authUser);
-        } else if (!authUser) {
+        if (authUser) {
+          await getOrWaitForProfile(authUser);
+        } else {
           setProfile(null);
         }
       }
@@ -155,52 +143,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [getOrWaitForProfile]);
-
-  // ✅ Memoize sign in function
-  const signIn = useCallback(async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error };
-    } catch (error) {
-      return { error };
-    }
   }, []);
 
-  // ✅ Optimasi sign up dengan better error handling
-  const signUp = useCallback(async (email: string, password: string, fullName: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName, // ✅ Pass metadata saat signup
-          }
-        }
-      });
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
+  };
 
-      if (error) return { error };
+  const signUp = async (email: string, password: string, fullName: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
 
-      // ✅ Profile akan dibuat otomatis oleh trigger
-      // Hanya create manual jika trigger gagal
-      if (data.user) {
-        setTimeout(() => {
-          getOrWaitForProfile(data.user!);
-        }, 500); // ✅ Beri waktu trigger untuk berjalan
+    if (!error && data.user) {
+      const { data: newProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert({
+          user_id: data.user.id,
+          full_name: fullName,
+          currency: 'Rp',
+        })
+        .select()
+        .single();
+
+      if (!profileError) {
+        setProfile(newProfile);
       }
-
-      return { error: null };
-    } catch (error) {
-      return { error };
     }
-  }, [getOrWaitForProfile]);
 
-  // ✅ Memoize Google sign in
-  const signInWithGoogle = useCallback(async () => {
+    return { error };
+  };
+
+  const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -209,33 +187,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           access_type: 'offline',
           prompt: 'consent',
         },
+        skipBrowserRedirect: false,
       },
     });
 
-    if (error) throw error;
-  }, []);
+    if (error) {
+      throw error;
+    }
+  };
 
-  // ✅ Memoize sign out
-  const signOut = useCallback(async () => {
+  const signOut = async () => {
     await supabase.auth.signOut();
-    setUser(null);
     setProfile(null);
-  }, []);
+  };
 
-  // ✅ Memoize context value untuk prevent unnecessary re-renders
-  const contextValue = useMemo(() => ({
-    user,
-    profile,
-    loading,
-    signIn,
-    signUp,
-    signInWithGoogle,
-    signOut,
-    refreshProfile,
-  }), [user, profile, loading, signIn, signUp, signInWithGoogle, signOut, refreshProfile]);
-
+  // ✅ JANGAN tampilkan loading screen di sini - biarkan page yang handle
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider
+      value={{
+        user,
+        profile,
+        loading,
+        signIn,
+        signUp,
+        signInWithGoogle,
+        signOut,
+        refreshProfile
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
