@@ -1,2 +1,2 @@
-Financial Management with AI
+Financial Management with Gemini AI
 ============================
