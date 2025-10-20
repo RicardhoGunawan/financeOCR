@@ -1,1 +1,1 @@
-financeOCR
+Financial Management System(FMS) whit AI Gemini
