@@ -1,2 +1,1 @@
-Financial Management with Gemini AI
-============================
+financeOCR
