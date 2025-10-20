@@ -1,2 +1,2 @@
-Financial Management
-====================
+Financial Management with AI
+============================
