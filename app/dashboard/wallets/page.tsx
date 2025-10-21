@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, Wallet, WalletWithStats, WalletTransfer } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatting';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,14 +41,6 @@ import {
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
-const formatRupiah = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(amount);
-};
 
 const WALLET_TYPES = [
     { value: 'cash', label: 'Cash', icon: WalletIcon },
@@ -64,13 +57,13 @@ const WALLET_COLORS = [
 ];
 
 export default function WalletsPage() {
-    const { user } = useAuth();
+    const { user,profile } = useAuth();
     const [wallets, setWallets] = useState<WalletWithStats[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [transferDialogOpen, setTransferDialogOpen] = useState(false);
     const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
-
+    
     const [formData, setFormData] = useState({
         name: '',
         type: 'cash' as Wallet['type'],
@@ -78,13 +71,14 @@ export default function WalletsPage() {
         description: '',
         color: WALLET_COLORS[0],
     });
-
+    
     const [transferData, setTransferData] = useState({
         from_wallet_id: '',
         to_wallet_id: '',
         amount: '',
         note: '',
     });
+    const userCurrency = profile?.currency
 
     useEffect(() => {
         if (user) {
@@ -355,7 +349,7 @@ export default function WalletsPage() {
                                         <SelectContent>
                                             {activeWallets.map((wallet) => (
                                                 <SelectItem key={wallet.id} value={wallet.id.toString()}>
-                                                    {wallet.name} ({formatRupiah(wallet.balance)})
+                                                    {wallet.name} ({formatCurrency(wallet.balance, userCurrency)})
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -378,7 +372,7 @@ export default function WalletsPage() {
                                                 .filter(w => w.id.toString() !== transferData.from_wallet_id)
                                                 .map((wallet) => (
                                                     <SelectItem key={wallet.id} value={wallet.id.toString()}>
-                                                        {wallet.name} ({formatRupiah(wallet.balance)})
+                                                        {wallet.name} ({formatCurrency(wallet.balance, userCurrency)})
                                                     </SelectItem>
                                                 ))}
                                         </SelectContent>
@@ -559,7 +553,7 @@ export default function WalletsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl sm:text-3xl font-bold text-slate-900">
-                            {formatRupiah(totalBalance)}
+                            {formatCurrency(totalBalance, userCurrency)}
                         </div>
                         <p className="text-xs text-slate-600 mt-1">All wallets</p>
                     </CardContent>
@@ -655,7 +649,7 @@ export default function WalletsPage() {
                                     <div className="mb-4">
                                         <p className="text-sm text-slate-600 mb-1">Balance</p>
                                         <p className="text-2xl font-bold text-slate-900">
-                                            {formatRupiah(wallet.balance)}
+                                            {formatCurrency(wallet.balance, userCurrency)}
                                         </p>
                                     </div>
 
@@ -663,13 +657,13 @@ export default function WalletsPage() {
                                         <div>
                                             <p className="text-slate-600">Income</p>
                                             <p className="font-semibold text-green-600">
-                                                {formatRupiah(wallet.total_income)}
+                                                {formatCurrency(wallet.total_income, userCurrency)}
                                             </p>
                                         </div>
                                         <div>
                                             <p className="text-slate-600">Expense</p>
                                             <p className="font-semibold text-red-600">
-                                                {formatRupiah(wallet.total_expense)}
+                                                {formatCurrency(wallet.total_expense, userCurrency)}
                                             </p>
                                         </div>
                                     </div>

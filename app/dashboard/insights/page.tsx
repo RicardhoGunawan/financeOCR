@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, Insight } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatting';
 import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,14 +25,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 
-const formatRupiah = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
 
 const getInsightIcon = (type: string) => {
   switch (type) {
@@ -77,7 +70,7 @@ const getSeverityIcon = (severity: string) => {
 };
 
 export default function InsightsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);

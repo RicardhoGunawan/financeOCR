@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, Transaction, BudgetWithSpent, Insight } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatting';
 import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -29,15 +30,6 @@ import { FinanceChatbot } from '@/components/finance-chatbot';
 import { toast } from 'sonner';
 
 
-const formatRupiah = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
 const getSeverityColor = (severity: string) => {
   switch (severity) {
     case 'critical':
@@ -59,7 +51,7 @@ type TransactionWithWallet = Transaction & {
 };
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState({
     totalIncome: 0,
@@ -76,6 +68,7 @@ export default function DashboardPage() {
     count: 0,
     activeCount: 0,
   });
+  const userCurrency = profile?.currency;
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -308,7 +301,7 @@ export default function DashboardPage() {
                   <Progress value={Math.min(budget.percentage, 100)} className="h-2 mb-2" />
                   <div className="flex justify-between text-xs text-slate-600">
                     <span className="truncate mr-2">
-                      {formatRupiah(budget.spent)} / {formatRupiah(budget.amount)}
+                      {formatCurrency(budget.spent, userCurrency)} / {formatCurrency(budget.amount, userCurrency)}
                     </span>
                     {budget.percentage >= 100 ? (
                       <span className="text-red-600 font-medium flex-shrink-0">Over budget!</span>
@@ -338,7 +331,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl sm:text-2xl font-bold truncate">
-                {formatRupiah(walletStats.total)}
+                {formatCurrency(walletStats.total, userCurrency)}
               </div>
               <p className="text-xs text-slate-600 mt-1">
                 {walletStats.activeCount} active wallets
@@ -353,7 +346,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl sm:text-2xl font-bold text-green-600 truncate">
-                {formatRupiah(stats.totalIncome)}
+                {formatCurrency(stats.totalIncome, userCurrency)}
               </div>
               <p className="text-xs text-slate-600 mt-1">All transactions</p>
             </CardContent>
@@ -366,7 +359,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl sm:text-2xl font-bold text-red-600 truncate">
-                {formatRupiah(stats.totalExpense)}
+                {formatCurrency(stats.totalExpense, userCurrency)}
               </div>
               <p className="text-xs text-slate-600 mt-1">All transactions</p>
             </CardContent>
@@ -439,7 +432,7 @@ export default function DashboardPage() {
                         >
                           <span>
                             {transaction.type === 'income' ? '+' : '-'}
-                            {formatRupiah(Number(transaction.amount))}
+                            {formatCurrency(Number(transaction.amount), userCurrency)}
                           </span>
                         </div>
                       </div>

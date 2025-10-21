@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, Transaction } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatting';
 import { useAuth } from '@/lib/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -48,17 +49,17 @@ type WalletData = {
 
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
-const formatRupiah = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+// const formatRupiah = (amount: number) => {
+//   return new Intl.NumberFormat('id-ID', {
+//     style: 'currency',
+//     currency: 'IDR',
+//     minimumFractionDigits: 0,
+//     maximumFractionDigits: 0,
+//   }).format(amount);
+// };
 
 export default function AnalyticsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('6months');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -80,6 +81,7 @@ export default function AnalyticsPage() {
     highestIncome: 0,
     walletBalance: 0,
   });
+  const userCurrency = profile?.currency;
 
   useEffect(() => {
     if (user) {
@@ -227,7 +229,7 @@ export default function AnalyticsPage() {
           <p className="font-medium text-slate-900 mb-1 sm:mb-2 text-xs sm:text-sm">{label}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} style={{ color: entry.color }} className="text-xs sm:text-sm">
-              {entry.name}: {formatRupiah(entry.value)}
+              {entry.name}: {formatCurrency(entry.value, userCurrency)}
             </p>
           ))}
         </div>
@@ -275,7 +277,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-emerald-600 truncate">
-              {formatRupiah(summary.walletBalance)}
+              {formatCurrency(summary.walletBalance, userCurrency)}
             </div>
             <p className="text-xs text-slate-600 mt-1">Current total</p>
           </CardContent>
@@ -288,7 +290,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-green-600 truncate">
-              {formatRupiah(summary.avgIncome)}
+              {formatCurrency(summary.avgIncome, userCurrency)}
             </div>
             <p className="text-xs text-slate-600 mt-1">Per transaction</p>
           </CardContent>
@@ -301,7 +303,7 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-red-600 truncate">
-              {formatRupiah(summary.avgExpense)}
+              {formatCurrency(summary.avgExpense, userCurrency)}
             </div>
             <p className="text-xs text-slate-600 mt-1">Per transaction</p>
           </CardContent>
@@ -314,11 +316,10 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-xl sm:text-2xl font-bold truncate ${
-                summary.totalIncome - summary.totalExpense >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
+              className={`text-xl sm:text-2xl font-bold truncate ${summary.totalIncome - summary.totalExpense >= 0 ? 'text-green-600' : 'text-red-600'
+                }`}
             >
-              {formatRupiah(summary.totalIncome - summary.totalExpense)}
+              {formatCurrency(summary.totalIncome - summary.totalExpense, userCurrency)}
             </div>
             <p className="text-xs text-slate-600 mt-1">Total balance</p>
           </CardContent>
@@ -421,7 +422,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatRupiah(value)} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value, userCurrency)} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -452,7 +453,7 @@ export default function AnalyticsPage() {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatRupiah(value)} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value, userCurrency)} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -485,7 +486,7 @@ export default function AnalyticsPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => formatRupiah(value)} />
+                <Tooltip formatter={(value: number) => formatCurrency(value, userCurrency)} />
               </PieChart>
             </ResponsiveContainer>
           )}

@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
+import { formatCurrency } from '@/lib/formatting';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -20,14 +21,7 @@ interface QueryFilter {
     date_end?: string;
 }
 
-const formatRupiah = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(amount);
-};
+
 
 // Simplified date range
 function getDateRange(question: string): { start: string; end: string } {
@@ -172,7 +166,7 @@ function detectIntent(question: string): Intent {
     return 'complex';
 }
 
-function generateDirectAnswer(intent: Intent, transactions: any[], filters: QueryFilter, question: string): string | null {
+function generateDirectAnswer(intent: Intent, transactions: any[], filters: QueryFilter, question: string, userCurrency: string): string | null {
     if (transactions.length === 0) {
         return `Tidak ada data transaksi yang ditemukan untuk periode ini. Silakan tambahkan transaksi terlebih dahulu.`;
     }
@@ -184,15 +178,15 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
         case 'total': {
             if (filters.type === 'expense' || question.includes('pengeluaran')) {
                 const total = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
-                return `💰 **Total Pengeluaran**\n\n${formatRupiah(total)}\n\n📊 Dari ${expenses.length} transaksi`;
+                return `💰 **Total Pengeluaran**\n\n${formatCurrency(total, userCurrency)}\n\n📊 Dari ${expenses.length} transaksi`;
             } else if (filters.type === 'income' || question.includes('pemasukan')) {
                 const total = incomes.reduce((sum, t) => sum + Number(t.amount), 0);
-                return `💰 **Total Pemasukan**\n\n${formatRupiah(total)}\n\n📊 Dari ${incomes.length} transaksi`;
+                return `💰 **Total Pemasukan**\n\n${formatCurrency(total, userCurrency)}\n\n📊 Dari ${incomes.length} transaksi`;
             } else {
                 const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
                 const totalIncome = incomes.reduce((sum, t) => sum + Number(t.amount), 0);
                 const netFlow = totalIncome - totalExpense;
-                return `💰 **Ringkasan Keuangan**\n\n**Pemasukan:** ${formatRupiah(totalIncome)}\n**Pengeluaran:** ${formatRupiah(totalExpense)}\n**Net Flow:** ${formatRupiah(netFlow)} ${netFlow >= 0 ? '✅' : '⚠️'}`;
+                return `💰 **Ringkasan Keuangan**\n\n**Pemasukan:** ${formatCurrency(totalIncome, userCurrency)}\n**Pengeluaran:** ${formatCurrency(totalExpense, userCurrency)}\n**Net Flow:** ${formatCurrency(netFlow, userCurrency)} ${netFlow >= 0 ? '✅' : '⚠️'}`;
             }
         }
 
@@ -218,7 +212,7 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
 
             top5.forEach(([cat, amount], i) => {
                 const emoji = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'][i];
-                response += `${emoji} **${cat}**\n   ${formatRupiah(amount)}\n\n`;
+                response += `${emoji} **${cat}**\n   ${formatCurrency(amount, userCurrency)}\n\n`;
             });
 
             return response.trim();
@@ -232,7 +226,7 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
             const avg = total / targetTransactions.length;
             const typeLabel = filters.type === 'income' ? 'Pemasukan' : (filters.type === 'expense' ? 'Pengeluaran' : 'Transaksi');
 
-            return `📊 **Rata-rata ${typeLabel}**\n\n${formatRupiah(avg)}\n\nDari ${targetTransactions.length} transaksi`;
+            return `📊 **Rata-rata ${typeLabel}**\n\n${formatCurrency(avg, userCurrency)}\n\nDari ${targetTransactions.length} transaksi`;
         }
 
         case 'count': {
@@ -246,7 +240,7 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
             if (targetTransactions.length === 0) return 'Tidak ada data.';
 
             const biggest = targetTransactions.reduce((max, t) => Number(t.amount) > Number(max.amount) ? t : max);
-            return `💎 **Transaksi Terbesar**\n\n**${biggest.title}**\n${formatRupiah(Number(biggest.amount))}\n\n📅 ${new Date(biggest.date).toLocaleDateString('id-ID')}\n🏷️ ${biggest.category?.name || 'Tanpa kategori'}`;
+            return `💎 **Transaksi Terbesar**\n\n**${biggest.title}**\n${formatCurrency(Number(biggest.amount), userCurrency)}\n\n📅 ${new Date(biggest.date).toLocaleDateString('id-ID')}\n🏷️ ${biggest.category?.name || 'Tanpa kategori'}`;
         }
 
         case 'smallest': {
@@ -254,7 +248,7 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
             if (targetTransactions.length === 0) return 'Tidak ada data.';
 
             const smallest = targetTransactions.reduce((min, t) => Number(t.amount) < Number(min.amount) ? t : min);
-            return `💰 **Transaksi Terkecil**\n\n**${smallest.title}**\n${formatRupiah(Number(smallest.amount))}\n\n📅 ${new Date(smallest.date).toLocaleDateString('id-ID')}\n🏷️ ${smallest.category?.name || 'Tanpa kategori'}`;
+            return `💰 **Transaksi Terkecil**\n\n**${smallest.title}**\n${formatCurrency(Number(smallest.amount), userCurrency)}\n\n📅 ${new Date(smallest.date).toLocaleDateString('id-ID')}\n🏷️ ${smallest.category?.name || 'Tanpa kategori'}`;
         }
 
         case 'list': {
@@ -265,7 +259,7 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
 
             let response = `📋 **Daftar Transaksi**\n\n`;
             top10.forEach((t, i) => {
-                response += `${i + 1}. **${t.title}**\n   ${formatRupiah(Number(t.amount))} • ${t.category?.name || 'Lainnya'}\n   ${new Date(t.date).toLocaleDateString('id-ID')}\n\n`;
+                response += `${i + 1}. **${t.title}**\n   ${formatCurrency(Number(t.amount), userCurrency)} • ${t.category?.name || 'Lainnya'}\n   ${new Date(t.date).toLocaleDateString('id-ID')}\n\n`;
             });
 
             if (targetTransactions.length > 10) {
@@ -318,10 +312,10 @@ async function generateAIResponse(question: string, transactions: any[]): Promis
 Pertanyaan: "${question}"
 
 Data:
-- Total Pengeluaran: ${formatRupiah(totalExpense)}
-- Total Pemasukan: ${formatRupiah(totalIncome)}
-- Net Flow: ${formatRupiah(totalIncome - totalExpense)}
-- Top Kategori: ${topCategories.map(c => `${c.category} (${formatRupiah(c.amount)})`).join(', ')}
+- Total Pengeluaran: ${formatCurrency(totalExpense, userCurrency)}
+- Total Pemasukan: ${formatCurrency(totalIncome, userCurrency)}
+- Net Flow: ${formatCurrency(totalIncome - totalExpense, userCurrency)}
+- Top Kategori: ${topCategories.map(c => `${c.category} (${formatCurrency(c.amount, userCurrency)})`).join(', ')}
 - Sample transaksi: ${JSON.stringify(sample)}
 
 Instruksi:

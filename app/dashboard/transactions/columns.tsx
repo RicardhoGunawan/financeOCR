@@ -14,6 +14,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { formatCurrency } from '@/lib/formatting'; // <-- IMPORT FUNGSI BARU
+
 
 export type TransactionWithWallet = {
     id: number;
@@ -37,18 +39,10 @@ export type TransactionWithWallet = {
     };
 };
 
-const formatRupiah = (amount: number) => {
-    return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(amount);
-};
-
 export const createColumns = (
     onEdit: (transaction: TransactionWithWallet) => void,
-    onDelete: (transaction: TransactionWithWallet) => void
+    onDelete: (transaction: TransactionWithWallet) => void,
+    currency: string | null | undefined 
 ): ColumnDef<TransactionWithWallet>[] => [
         {
             id: 'select',
@@ -134,7 +128,7 @@ export const createColumns = (
                             }`}
                     >
                         {type === 'income' ? '+' : '-'}
-                        {formatRupiah(amount)}
+                        {formatCurrency(amount, currency)}
                     </div>
                 );
             },

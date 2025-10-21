@@ -36,7 +36,7 @@ export default function ProfilePage() {
 
     const [saving, setSaving] = useState(false);
     const [fullName, setFullName] = useState('');
-    const [currency, setCurrency] = useState('Rp');
+    const [currency, setCurrency] = useState('IDR');
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string>('');
 
@@ -50,8 +50,7 @@ export default function ProfilePage() {
     const [deleting, setDeleting] = useState(false);
 
     const currencies = [
-        // ... (daftar mata uang Anda tidak berubah)
-        { code: 'Rp', label: 'Indonesian Rupiah (Rp)' },
+        { code: 'IDR', label: 'Indonesian Rupiah (IDR)' }, // <-- UBAH DI SINI
         { code: 'USD', label: 'US Dollar ($)' },
         { code: 'EUR', label: 'Euro (€)' },
         { code: 'GBP', label: 'British Pound (£)' },
@@ -77,7 +76,7 @@ export default function ProfilePage() {
     useEffect(() => {
         if (profile) {
             setFullName(profile.full_name || '');
-            setCurrency(profile.currency || 'Rp');
+            setCurrency(profile.currency || 'IDR');
             setAvatarPreview(profile.avatar_url || '');
             setAvatarFile(null); // Reset file input
         }
@@ -147,7 +146,7 @@ export default function ProfilePage() {
     const handleCancel = () => {
         if (!profile) return;
         setFullName(profile.full_name || '');
-        setCurrency(profile.currency || 'Rp');  
+        setCurrency(profile.currency || 'Rp');
         setAvatarPreview(profile.avatar_url || '');
         setAvatarFile(null);
         toast.info('Changes cancelled.');

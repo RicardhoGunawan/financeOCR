@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, Category } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatting';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,17 +30,9 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { DataTable } from './data-table';
 import { createColumns, TransactionWithWallet } from './columns';
 
-const formatRupiah = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
 
 export default function TransactionsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [transactions, setTransactions] = useState<TransactionWithWallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +51,7 @@ export default function TransactionsPage() {
     note: '',
     wallet_id: '',
   });
+  const userCurrency = profile?.currency;
 
   useEffect(() => {
     if (user) {
@@ -300,8 +294,7 @@ export default function TransactionsPage() {
     });
   };
 
-  const columns = createColumns(openEditDialog, handleDelete);
-
+  const columns = createColumns(openEditDialog, handleDelete, userCurrency);
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -428,7 +421,7 @@ export default function TransactionsPage() {
                               className="h-3 w-3 rounded-full"
                               style={{ backgroundColor: wallet.color }}
                             />
-                            {wallet.name} ({formatRupiah(wallet.balance)})
+                            {wallet.name} ({formatCurrency(wallet.balance, userCurrency)})
                           </div>
                         </SelectItem>
                       ))}

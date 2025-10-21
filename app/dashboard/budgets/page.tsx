@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase, Category, Budget, BudgetWithSpent } from '@/lib/supabase';
+import { formatCurrency } from '@/lib/formatting';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,22 +28,13 @@ import { Plus, Edit, Trash2, AlertTriangle, CheckCircle2, TrendingUp } from 'luc
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
-const formatRupiah = (amount: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
-
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
 export default function BudgetsPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +51,7 @@ export default function BudgetsPage() {
     month: selectedMonth.toString(),
     year: selectedYear.toString(),
   });
+  const userCurrency = profile?.currency;
 
   useEffect(() => {
     if (user) {
@@ -417,7 +410,7 @@ export default function BudgetsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-slate-900">
-              {formatRupiah(totalBudget)}
+              {formatCurrency(totalBudget, userCurrency)}
             </div>
           </CardContent>
         </Card>
@@ -428,7 +421,7 @@ export default function BudgetsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold text-blue-600">
-              {formatRupiah(totalSpent)}
+              {formatCurrency(totalSpent, userCurrency)}
             </div>
             <p className="text-xs text-slate-600 mt-1">
               {totalBudget > 0 ? ((totalSpent / totalBudget) * 100).toFixed(1) : 0}% of total budget
@@ -445,7 +438,7 @@ export default function BudgetsPage() {
               className={`text-xl sm:text-2xl font-bold ${totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}
             >
-              {formatRupiah(totalRemaining)}
+                {formatCurrency(totalRemaining, userCurrency)}
             </div>
           </CardContent>
         </Card>
@@ -490,7 +483,7 @@ export default function BudgetsPage() {
                         {budget.category?.name || 'Unknown'}
                       </h3>
                       <p className="text-xs sm:text-sm text-slate-600">
-                        Budget: {formatRupiah(budget.amount)}
+                        Budget: {formatCurrency(budget.amount, userCurrency)}
                       </p>
                     </div>
                   </div>
@@ -525,7 +518,7 @@ export default function BudgetsPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs sm:text-sm">
                     <span className="text-slate-600">
-                      Spent: {formatRupiah(budget.spent)}
+                      Spent: {formatCurrency(budget.spent, userCurrency)}
                     </span>
                     <span className={`font-medium ${getStatusColor(budget.percentage)}`}>
                       {budget.percentage.toFixed(1)}%
@@ -533,10 +526,10 @@ export default function BudgetsPage() {
                   </div>
                   <Progress value={budget.percentage} className="h-2" />
                   <div className="flex justify-between text-xs text-slate-600">
-                    <span>Remaining: {formatRupiah(budget.remaining)}</span>
+                    <span>Remaining: {formatCurrency(budget.remaining, userCurrency)}</span>
                     {budget.percentage >= 100 && (
                       <span className="text-red-600 font-medium">
-                        Over by {formatRupiah(Math.abs(budget.remaining))}
+                        Over by {formatCurrency(Math.abs(budget.remaining), userCurrency)}
                       </span>
                     )}
                   </div>
