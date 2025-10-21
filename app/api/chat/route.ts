@@ -278,7 +278,7 @@ function generateDirectAnswer(intent: Intent, transactions: any[], filters: Quer
 // AI GENERATION (untuk pertanyaan kompleks)
 // ============================================
 
-async function generateAIResponse(question: string, transactions: any[]): Promise<string> {
+async function generateAIResponse(question: string, transactions: any[], userCurrency: string): Promise<string> {
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const expenses = transactions.filter(t => t.type === 'expense');
@@ -345,6 +345,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Message dan userId diperlukan' }, { status: 400 });
         }
 
+        const { data: profile, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('currency')
+            .eq('user_id', userId)
+            .single();
+
+        if (profileError) {
+            console.warn('Gagal mengambil profil user, fallback ke IDR:', profileError.message);
+        }
+
+        const userCurrency = profile?.currency || 'IDR';
+
         const lowerMessage = message.toLowerCase();
         const filters = parseUserQuery(lowerMessage);
         const transactions = await fetchTransactions(userId, filters);
@@ -356,12 +368,12 @@ export async function POST(req: NextRequest) {
         let response: string | null = null;
 
         if (['total', 'top_category', 'average', 'count', 'biggest', 'smallest', 'list'].includes(intent)) {
-            response = generateDirectAnswer(intent, transactions, filters, lowerMessage);
+            response = generateDirectAnswer(intent, transactions, filters, lowerMessage, userCurrency);
         }
 
         // Jika tidak bisa dijawab langsung atau pertanyaan kompleks, gunakan AI
         if (!response || intent === 'comparison' || intent === 'advice' || intent === 'complex') {
-            response = await generateAIResponse(message, transactions);
+            response = await generateAIResponse(message, transactions, userCurrency);
         }
 
         return NextResponse.json({
@@ -371,6 +383,7 @@ export async function POST(req: NextRequest) {
                 intent,
                 data_count: transactions.length,
                 used_ai: !['total', 'top_category', 'average', 'count', 'biggest', 'smallest', 'list'].includes(intent),
+                currency: userCurrency,
             },
         });
     } catch (error) {
