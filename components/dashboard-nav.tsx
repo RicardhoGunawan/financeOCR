@@ -41,11 +41,24 @@ import {
 import { cn } from '@/lib/utils';
 import { useState, useEffect } from 'react';
 
+interface NavItem {
+  title: string;
+  href: string | null;
+  icon: any;
+  isLogout?: boolean;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+
 interface DashboardNavProps {
   onClose?: () => void;
 }
 
-const navSections = [
+const navSections: NavSection[] = [
   {
     label: 'Main',
     items: [
