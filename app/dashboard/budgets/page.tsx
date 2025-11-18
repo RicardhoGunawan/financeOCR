@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Edit, Trash2, AlertTriangle, CheckCircle2, TrendingUp } from 'lucide-react';
+import { Plus, Edit, Trash2, AlertTriangle, CheckCircle2, TrendingUp, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
@@ -38,7 +38,9 @@ export default function BudgetsPage() {
   const [budgets, setBudgets] = useState<BudgetWithSpent[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copying, setCopying] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
   const currentDate = new Date();
@@ -51,6 +53,11 @@ export default function BudgetsPage() {
     month: selectedMonth.toString(),
     year: selectedYear.toString(),
   });
+
+  // Copy dialog state
+  const [copyFromMonth, setCopyFromMonth] = useState('');
+  const [copyFromYear, setCopyFromYear] = useState('');
+
   const userCurrency = profile?.currency;
 
   useEffect(() => {
@@ -121,6 +128,97 @@ export default function BudgetsPage() {
       toast.error('Failed to load budgets');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const copyBudgetsFromMonth = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!copyFromMonth || !copyFromYear) {
+      toast.error('Please select a month and year to copy from');
+      return;
+    }
+
+    const fromMonth = parseInt(copyFromMonth);
+    const fromYear = parseInt(copyFromYear);
+
+    // Check if trying to copy from the same month/year
+    if (fromMonth === selectedMonth && fromYear === selectedYear) {
+      toast.error('Cannot copy from the same month and year');
+      return;
+    }
+
+    try {
+      setCopying(true);
+
+      // Get budgets from selected month
+      const { data: previousBudgets, error: fetchError } = await supabase
+        .from('budgets')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('month', fromMonth)
+        .eq('year', fromYear);
+
+      if (fetchError) throw fetchError;
+
+      if (!previousBudgets || previousBudgets.length === 0) {
+        toast.error(`No budgets found for ${MONTHS[fromMonth - 1]} ${fromYear}`);
+        return;
+      }
+
+      // Check if budgets already exist for current month
+      const { data: existingBudgets } = await supabase
+        .from('budgets')
+        .select('category_id')
+        .eq('user_id', user?.id)
+        .eq('month', selectedMonth)
+        .eq('year', selectedYear);
+
+      const existingCategoryIds = new Set(existingBudgets?.map(b => b.category_id) || []);
+
+      // Filter out budgets that already exist
+      const budgetsToCreate = previousBudgets
+        .filter(budget => !existingCategoryIds.has(budget.category_id))
+        .map(budget => ({
+          user_id: user?.id,
+          category_id: budget.category_id,
+          amount: budget.amount,
+          month: selectedMonth,
+          year: selectedYear,
+        }));
+
+      if (budgetsToCreate.length === 0) {
+        toast.info(`All budgets from ${MONTHS[fromMonth - 1]} ${fromYear} already exist for this period`);
+        setCopyDialogOpen(false);
+        resetCopyForm();
+        return;
+      }
+
+      // Insert new budgets
+      const { error: insertError } = await supabase
+        .from('budgets')
+        .insert(budgetsToCreate);
+
+      if (insertError) throw insertError;
+
+      const skippedCount = previousBudgets.length - budgetsToCreate.length;
+      
+      if (skippedCount > 0) {
+        toast.success(
+          `Copied ${budgetsToCreate.length} budget(s) from ${MONTHS[fromMonth - 1]} ${fromYear}. ${skippedCount} already existed.`
+        );
+      } else {
+        toast.success(`Successfully copied ${budgetsToCreate.length} budget(s) from ${MONTHS[fromMonth - 1]} ${fromYear}`);
+      }
+
+      setCopyDialogOpen(false);
+      resetCopyForm();
+      loadBudgets();
+    } catch (error) {
+      console.error('Error copying budgets:', error);
+      toast.error('Failed to copy budgets');
+    } finally {
+      setCopying(false);
     }
   };
 
@@ -200,6 +298,11 @@ export default function BudgetsPage() {
     });
   };
 
+  const resetCopyForm = () => {
+    setCopyFromMonth('');
+    setCopyFromYear('');
+  };
+
   const getStatusColor = (percentage: number) => {
     if (percentage >= 100) return 'text-red-600';
     if (percentage >= 80) return 'text-orange-600';
@@ -228,79 +331,50 @@ export default function BudgetsPage() {
             Manage your monthly budgets by category
           </p>
         </div>
-        <Dialog
-          open={dialogOpen}
-          onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button className="gap-2 w-full sm:w-auto">
-              <Plus className="h-4 w-4" />
-              Add Budget
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-md sm:max-w-[500px] p-0 flex flex-col max-h-[95vh]">
-            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
-              <DialogTitle className="text-lg sm:text-xl">
-                {editingBudget ? 'Edit Budget' : 'Add New Budget'}
-              </DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm">
-                {editingBudget
-                  ? 'Update the budget for this category.'
-                  : 'Create a new budget to control your expenses.'}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4">
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="category" className="text-xs sm:text-sm">Category</Label>
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, category_id: value })
-                    }
-                    disabled={!!editingBudget}
-                  >
-                    <SelectTrigger className="text-sm h-9 sm:h-10">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+          {/* Copy Budget Dialog */}
+          <Dialog 
+            open={copyDialogOpen} 
+            onOpenChange={(open) => {
+              setCopyDialogOpen(open);
+              if (!open) resetCopyForm();
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                <Copy className="h-4 w-4" />
+                Copy Budget
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[100vw] h-[100dvh] sm:w-[95vw] sm:h-auto sm:max-w-[425px] p-0 flex flex-col sm:max-h-[90vh] sm:rounded-lg rounded-none">
+              <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
+                <DialogTitle className="text-lg sm:text-xl">Copy Budget from Another Month</DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm">
+                  Select a month to copy budgets to {MONTHS[selectedMonth - 1]} {selectedYear}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={copyBudgetsFromMonth} className="flex flex-col flex-1 overflow-hidden min-h-0">
+                <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4 overscroll-contain">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+                    <p className="text-xs sm:text-sm text-blue-800">
+                      <strong>Current Target:</strong> {MONTHS[selectedMonth - 1]} {selectedYear}
+                    </p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      Budgets will be copied to this period
+                    </p>
+                  </div>
 
-                <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="amount" className="text-xs sm:text-sm">Budget Amount</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    step="1000"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                    placeholder="1000000"
-                    required
-                    className="text-sm h-9 sm:h-10"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-4">
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="month" className="text-xs sm:text-sm">Month</Label>
+                    <Label htmlFor="copyFromMonth" className="text-xs sm:text-sm font-medium">
+                      Copy From Month
+                    </Label>
                     <Select
-                      value={formData.month}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, month: value })
-                      }
+                      value={copyFromMonth}
+                      onValueChange={setCopyFromMonth}
+                      required
                     >
-                      <SelectTrigger className="text-sm h-9 sm:h-10">
-                        <SelectValue />
+                      <SelectTrigger className="text-sm h-10 sm:h-10">
+                        <SelectValue placeholder="Select month" />
                       </SelectTrigger>
                       <SelectContent>
                         {MONTHS.map((month, index) => (
@@ -313,15 +387,16 @@ export default function BudgetsPage() {
                   </div>
 
                   <div className="space-y-1.5 sm:space-y-2">
-                    <Label htmlFor="year" className="text-xs sm:text-sm">Year</Label>
+                    <Label htmlFor="copyFromYear" className="text-xs sm:text-sm font-medium">
+                      Copy From Year
+                    </Label>
                     <Select
-                      value={formData.year}
-                      onValueChange={(value) =>
-                        setFormData({ ...formData, year: value })
-                      }
+                      value={copyFromYear}
+                      onValueChange={setCopyFromYear}
+                      required
                     >
-                      <SelectTrigger className="text-sm h-9 sm:h-10">
-                        <SelectValue />
+                      <SelectTrigger className="text-sm h-10 sm:h-10">
+                        <SelectValue placeholder="Select year" />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(
@@ -334,28 +409,189 @@ export default function BudgetsPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-              </div>
 
-              <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50">
-                <Button type="submit" className="w-full h-9 sm:h-10 text-sm">
-                  {editingBudget ? 'Update' : 'Add'} Budget
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setDialogOpen(false);
-                    resetForm();
-                  }}
-                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+                  {copyFromMonth && copyFromYear && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+                      <p className="text-xs sm:text-sm text-green-800">
+                        <strong>Selected:</strong> {MONTHS[parseInt(copyFromMonth) - 1]} {copyFromYear}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        All budgets from this period will be copied
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Extra padding for mobile keyboard */}
+                  <div className="h-4 sm:hidden" />
+                </div>
+
+                <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50 flex-shrink-0">
+                  <Button 
+                    type="submit" 
+                    className="w-full h-10 sm:h-10 text-sm font-medium"
+                    disabled={copying || !copyFromMonth || !copyFromYear}
+                  >
+                    {copying ? (
+                      <>
+                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Copying...
+                      </>
+                    ) : (
+                      'Copy Budget'
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setCopyDialogOpen(false);
+                      resetCopyForm();
+                    }}
+                    className="w-full sm:w-auto h-10 sm:h-10 text-sm font-medium"
+                    disabled={copying}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Add Budget Dialog */}
+          <Dialog
+            open={dialogOpen}
+            onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button className="gap-2 w-full sm:w-auto">
+                <Plus className="h-4 w-4" />
+                Add Budget
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="w-[100vw] h-[100dvh] sm:w-[95vw] sm:h-auto sm:max-w-[500px] p-0 flex flex-col sm:max-h-[90vh] sm:rounded-lg rounded-none">
+              <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
+                <DialogTitle className="text-lg sm:text-xl">
+                  {editingBudget ? 'Edit Budget' : 'Add New Budget'}
+                </DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm">
+                  {editingBudget
+                    ? 'Update the budget for this category.'
+                    : 'Create a new budget to control your expenses.'}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+                <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4 overscroll-contain">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="category" className="text-xs sm:text-sm font-medium">Category</Label>
+                    <Select
+                      value={formData.category_id}
+                      onValueChange={(value) =>
+                        setFormData({ ...formData, category_id: value })
+                      }
+                      disabled={!!editingBudget}
+                    >
+                      <SelectTrigger className="text-sm h-10 sm:h-10">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="amount" className="text-xs sm:text-sm font-medium">Budget Amount</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      step="1000"
+                      inputMode="decimal"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      placeholder="1000000"
+                      required
+                      className="text-sm h-10 sm:h-10"
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label htmlFor="month" className="text-xs sm:text-sm font-medium">Month</Label>
+                      <Select
+                        value={formData.month}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, month: value })
+                        }
+                      >
+                        <SelectTrigger className="text-sm h-10 sm:h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MONTHS.map((month, index) => (
+                            <SelectItem key={index} value={(index + 1).toString()}>
+                              {month}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label htmlFor="year" className="text-xs sm:text-sm font-medium">Year</Label>
+                      <Select
+                        value={formData.year}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, year: value })
+                        }
+                      >
+                        <SelectTrigger className="text-sm h-10 sm:h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i).map(
+                            (year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Extra padding for mobile keyboard */}
+                  <div className="h-4 sm:hidden" />
+                </div>
+
+                <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50 flex-shrink-0">
+                  <Button type="submit" className="w-full h-10 sm:h-10 text-sm font-medium">
+                    {editingBudget ? 'Update' : 'Add'} Budget
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDialogOpen(false);
+                      resetForm();
+                    }}
+                    className="w-full sm:w-auto h-10 sm:h-10 text-sm font-medium"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Month/Year Selector */}
@@ -438,7 +674,7 @@ export default function BudgetsPage() {
               className={`text-xl sm:text-2xl font-bold ${totalRemaining >= 0 ? 'text-green-600' : 'text-red-600'
                 }`}
             >
-                {formatCurrency(totalRemaining, userCurrency)}
+              {formatCurrency(totalRemaining, userCurrency)}
             </div>
           </CardContent>
         </Card>
@@ -501,13 +737,12 @@ export default function BudgetsPage() {
                       description="This action will permanently remove the selected data from the system. Please confirm to continue."
                       onConfirm={() => handleDelete(budget.id)}
                       confirmText="Delete"
-                      isDestructive={true} // This will apply the red style to the delete button
+                      isDestructive={true}
                     >
-                      {/* This is the trigger element (children) */}
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 sm:h-10 sm:w-10"
+                        className="h-8 w-8 sm:h-9 sm:w-9"
                       >
                         <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                       </Button>

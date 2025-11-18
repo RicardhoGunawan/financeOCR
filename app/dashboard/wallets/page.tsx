@@ -57,13 +57,13 @@ const WALLET_COLORS = [
 ];
 
 export default function WalletsPage() {
-    const { user,profile } = useAuth();
+    const { user, profile } = useAuth();
     const [wallets, setWallets] = useState<WalletWithStats[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [transferDialogOpen, setTransferDialogOpen] = useState(false);
     const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
-    
+
     const [formData, setFormData] = useState({
         name: '',
         type: 'cash' as Wallet['type'],
@@ -71,7 +71,7 @@ export default function WalletsPage() {
         description: '',
         color: WALLET_COLORS[0],
     });
-    
+
     const [transferData, setTransferData] = useState({
         from_wallet_id: '',
         to_wallet_id: '',
@@ -226,7 +226,6 @@ export default function WalletsPage() {
     };
 
     const handleDelete = async (id: number) => {
-
         try {
             const { error } = await supabase
                 .from('wallets')
@@ -316,96 +315,107 @@ export default function WalletsPage() {
                         Manage all your wallets and financial accounts
                     </p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+                    {/* Transfer Dialog */}
                     <Dialog open={transferDialogOpen} onOpenChange={(open) => {
                         setTransferDialogOpen(open);
                         if (!open) resetTransferForm();
                     }}>
                         <DialogTrigger asChild>
-                            <Button variant="outline" className="gap-2">
+                            <Button variant="outline" className="gap-2 w-full sm:w-auto">
                                 <ArrowRightLeft className="h-4 w-4" />
                                 Transfer
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                            <DialogHeader>
-                                <DialogTitle>Transfer Between Wallets</DialogTitle>
-                                <DialogDescription>
+                        <DialogContent className="w-[100vw] h-[100dvh] sm:w-[95vw] sm:h-auto sm:max-w-[500px] p-0 flex flex-col sm:max-h-[90vh] sm:rounded-lg rounded-none">
+                            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
+                                <DialogTitle className="text-lg sm:text-xl">Transfer Between Wallets</DialogTitle>
+                                <DialogDescription className="text-xs sm:text-sm">
                                     Move balance from one wallet to another
                                 </DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleTransfer} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label>From Wallet</Label>
-                                    <Select
-                                        value={transferData.from_wallet_id}
-                                        onValueChange={(value) =>
-                                            setTransferData({ ...transferData, from_wallet_id: value })
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select wallet" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {activeWallets.map((wallet) => (
-                                                <SelectItem key={wallet.id} value={wallet.id.toString()}>
-                                                    {wallet.name} ({formatCurrency(wallet.balance, userCurrency)})
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>To Wallet</Label>
-                                    <Select
-                                        value={transferData.to_wallet_id}
-                                        onValueChange={(value) =>
-                                            setTransferData({ ...transferData, to_wallet_id: value })
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select wallet" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {activeWallets
-                                                .filter(w => w.id.toString() !== transferData.from_wallet_id)
-                                                .map((wallet) => (
+                            <form onSubmit={handleTransfer} className="flex flex-col flex-1 overflow-hidden min-h-0">
+                                <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4 overscroll-contain">
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <Label className="text-xs sm:text-sm font-medium">From Wallet</Label>
+                                        <Select
+                                            value={transferData.from_wallet_id}
+                                            onValueChange={(value) =>
+                                                setTransferData({ ...transferData, from_wallet_id: value })
+                                            }
+                                        >
+                                            <SelectTrigger className="h-10 text-sm">
+                                                <SelectValue placeholder="Select wallet" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {activeWallets.map((wallet) => (
                                                     <SelectItem key={wallet.id} value={wallet.id.toString()}>
                                                         {wallet.name} ({formatCurrency(wallet.balance, userCurrency)})
                                                     </SelectItem>
                                                 ))}
-                                        </SelectContent>
-                                    </Select>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <Label className="text-xs sm:text-sm font-medium">To Wallet</Label>
+                                        <Select
+                                            value={transferData.to_wallet_id}
+                                            onValueChange={(value) =>
+                                                setTransferData({ ...transferData, to_wallet_id: value })
+                                            }
+                                        >
+                                            <SelectTrigger className="h-10 text-sm">
+                                                <SelectValue placeholder="Select wallet" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {activeWallets
+                                                    .filter(w => w.id.toString() !== transferData.from_wallet_id)
+                                                    .map((wallet) => (
+                                                        <SelectItem key={wallet.id} value={wallet.id.toString()}>
+                                                            {wallet.name} ({formatCurrency(wallet.balance, userCurrency)})
+                                                        </SelectItem>
+                                                    ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <Label className="text-xs sm:text-sm font-medium">Amount</Label>
+                                        <Input
+                                            type="number"
+                                            step="1000"
+                                            inputMode="decimal"
+                                            value={transferData.amount}
+                                            onChange={(e) =>
+                                                setTransferData({ ...transferData, amount: e.target.value })
+                                            }
+                                            placeholder="100000"
+                                            required
+                                            className="h-10 text-sm"
+                                            autoComplete="off"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <Label className="text-xs sm:text-sm font-medium">Note (optional)</Label>
+                                        <Textarea
+                                            value={transferData.note}
+                                            onChange={(e) =>
+                                                setTransferData({ ...transferData, note: e.target.value })
+                                            }
+                                            placeholder="Transfer for..."
+                                            className="text-sm resize-none min-h-[80px]"
+                                            rows={3}
+                                        />
+                                    </div>
+
+                                    {/* Extra padding for mobile keyboard */}
+                                    <div className="h-4 sm:hidden" />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label>Amount</Label>
-                                    <Input
-                                        type="number"
-                                        step="1000"
-                                        value={transferData.amount}
-                                        onChange={(e) =>
-                                            setTransferData({ ...transferData, amount: e.target.value })
-                                        }
-                                        placeholder="100000"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label>Note (optional)</Label>
-                                    <Textarea
-                                        value={transferData.note}
-                                        onChange={(e) =>
-                                            setTransferData({ ...transferData, note: e.target.value })
-                                        }
-                                        placeholder="Transfer for..."
-                                    />
-                                </div>
-
-                                <div className="flex gap-3 pt-4">
-                                    <Button type="submit" className="flex-1">
+                                <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50 flex-shrink-0">
+                                    <Button type="submit" className="w-full h-10 text-sm font-medium">
                                         Transfer
                                     </Button>
                                     <Button
@@ -415,6 +425,7 @@ export default function WalletsPage() {
                                             setTransferDialogOpen(false);
                                             resetTransferForm();
                                         }}
+                                        className="w-full sm:w-auto h-10 text-sm font-medium"
                                     >
                                         Cancel
                                     </Button>
@@ -423,107 +434,120 @@ export default function WalletsPage() {
                         </DialogContent>
                     </Dialog>
 
+                    {/* Add Wallet Dialog */}
                     <Dialog open={dialogOpen} onOpenChange={(open) => {
                         setDialogOpen(open);
                         if (!open) resetForm();
                     }}>
                         <DialogTrigger asChild>
-                            <Button className="gap-2">
+                            <Button className="gap-2 w-full sm:w-auto">
                                 <Plus className="h-4 w-4" />
                                 Add Wallet
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
-                            <DialogHeader>
-                                <DialogTitle>
+                        <DialogContent className="w-[100vw] h-[100dvh] sm:w-[95vw] sm:h-auto sm:max-w-[500px] p-0 flex flex-col sm:max-h-[90vh] sm:rounded-lg rounded-none">
+                            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
+                                <DialogTitle className="text-lg sm:text-xl">
                                     {editingWallet ? 'Edit Wallet' : 'Add New Wallet'}
                                 </DialogTitle>
-                                <DialogDescription>
+                                <DialogDescription className="text-xs sm:text-sm">
                                     {editingWallet
                                         ? 'Update wallet information'
                                         : 'Create a new wallet to manage your finances'}
                                 </DialogDescription>
                             </DialogHeader>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label>Wallet Name</Label>
-                                    <Input
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="e.g., BCA Savings"
-                                        required
-                                    />
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Type</Label>
-                                        <Select
-                                            value={formData.type}
-                                            onValueChange={(value: Wallet['type']) =>
-                                                setFormData({ ...formData, type: value })
-                                            }
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {WALLET_TYPES.map((type) => (
-                                                    <SelectItem key={type.value} value={type.value}>
-                                                        {type.label}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label>Initial Balance</Label>
+                            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+                                <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4 overscroll-contain">
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <Label className="text-xs sm:text-sm font-medium">Wallet Name</Label>
                                         <Input
-                                            type="number"
-                                            step="1000"
-                                            value={formData.balance}
-                                            onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
-                                            placeholder="0"
-                                            disabled={!!editingWallet}
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            placeholder="e.g., BCA Savings"
+                                            required
+                                            className="h-10 text-sm"
+                                            autoComplete="off"
                                         />
-                                        {editingWallet && (
-                                            <p className="text-xs text-slate-500">
-                                                Balance cannot be changed directly. Use transactions or transfers.
-                                            </p>
-                                        )}
                                     </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <Label>Color</Label>
-                                    <div className="flex gap-2">
-                                        {WALLET_COLORS.map((color) => (
-                                            <button
-                                                key={color}
-                                                type="button"
-                                                className={`h-10 w-10 rounded-full border-2 transition-all ${formData.color === color
-                                                    ? 'border-slate-900 scale-110'
-                                                    : 'border-slate-200'
-                                                    }`}
-                                                style={{ backgroundColor: color }}
-                                                onClick={() => setFormData({ ...formData, color })}
+                                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                                        <div className="space-y-1.5 sm:space-y-2">
+                                            <Label className="text-xs sm:text-sm font-medium">Type</Label>
+                                            <Select
+                                                value={formData.type}
+                                                onValueChange={(value: Wallet['type']) =>
+                                                    setFormData({ ...formData, type: value })
+                                                }
+                                            >
+                                                <SelectTrigger className="h-10 text-sm">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {WALLET_TYPES.map((type) => (
+                                                        <SelectItem key={type.value} value={type.value}>
+                                                            {type.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        <div className="space-y-1.5 sm:space-y-2">
+                                            <Label className="text-xs sm:text-sm font-medium">Initial Balance</Label>
+                                            <Input
+                                                type="number"
+                                                step="1000"
+                                                inputMode="decimal"
+                                                value={formData.balance}
+                                                onChange={(e) => setFormData({ ...formData, balance: e.target.value })}
+                                                placeholder="0"
+                                                disabled={!!editingWallet}
+                                                className="h-10 text-sm"
+                                                autoComplete="off"
                                             />
-                                        ))}
+                                            {editingWallet && (
+                                                <p className="text-xs text-slate-500 mt-1">
+                                                    Balance cannot be changed directly
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <Label className="text-xs sm:text-sm font-medium">Color</Label>
+                                        <div className="flex gap-2 flex-wrap">
+                                            {WALLET_COLORS.map((color) => (
+                                                <button
+                                                    key={color}
+                                                    type="button"
+                                                    className={`h-10 w-10 rounded-full border-2 transition-all flex-shrink-0 ${formData.color === color
+                                                        ? 'border-slate-900 scale-110 ring-2 ring-slate-300'
+                                                        : 'border-slate-200'
+                                                        }`}
+                                                    style={{ backgroundColor: color }}
+                                                    onClick={() => setFormData({ ...formData, color })}
+                                                />
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5 sm:space-y-2">
+                                        <Label className="text-xs sm:text-sm font-medium">Description (optional)</Label>
+                                        <Textarea
+                                            value={formData.description}
+                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                            placeholder="Notes about this wallet..."
+                                            className="text-sm resize-none min-h-[80px]"
+                                            rows={3}
+                                        />
+                                    </div>
+
+                                    {/* Extra padding for mobile keyboard */}
+                                    <div className="h-4 sm:hidden" />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label>Description (optional)</Label>
-                                    <Textarea
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        placeholder="Notes about this wallet..."
-                                    />
-                                </div>
-
-                                <div className="flex gap-3 pt-4">
-                                    <Button type="submit" className="flex-1">
+                                <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50 flex-shrink-0">
+                                    <Button type="submit" className="w-full h-10 text-sm font-medium">
                                         {editingWallet ? 'Update' : 'Add'} Wallet
                                     </Button>
                                     <Button
@@ -533,6 +557,7 @@ export default function WalletsPage() {
                                             setDialogOpen(false);
                                             resetForm();
                                         }}
+                                        className="w-full sm:w-auto h-10 text-sm font-medium"
                                     >
                                         Cancel
                                     </Button>
@@ -620,13 +645,13 @@ export default function WalletsPage() {
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="flex items-center gap-3">
                                             <div
-                                                className="h-12 w-12 rounded-full flex items-center justify-center"
+                                                className="h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0"
                                                 style={{ backgroundColor: wallet.color || '#10b981' }}
                                             >
                                                 <Icon className="h-6 w-6 text-white" />
                                             </div>
-                                            <div>
-                                                <h3 className="font-semibold text-slate-900 text-lg">
+                                            <div className="min-w-0">
+                                                <h3 className="font-semibold text-slate-900 text-lg truncate">
                                                     {wallet.name}
                                                 </h3>
                                                 <Badge variant="outline" className="text-xs">
@@ -636,7 +661,7 @@ export default function WalletsPage() {
                                         </div>
                                         <button
                                             onClick={() => toggleActiveStatus(wallet)}
-                                            className="text-slate-400 hover:text-slate-600"
+                                            className="text-slate-400 hover:text-slate-600 flex-shrink-0"
                                         >
                                             {wallet.is_active ? (
                                                 <Eye className="h-5 w-5" />
@@ -690,15 +715,14 @@ export default function WalletsPage() {
                                             description="This action will permanently remove the selected data from the system. Please confirm to continue."
                                             onConfirm={() => handleDelete(wallet.id)}
                                             confirmText="Delete"
-                                            isDestructive={true} // This will apply the red style to the delete button
+                                            isDestructive={true}
                                         >
-                                            {/* This is the trigger element (children) */}
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8 sm:h-10 sm:w-10"
+                                                className="h-8 w-8"
                                             >
-                                                <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
+                                                <Trash2 className="h-4 w-4 text-red-600" />
                                             </Button>
                                         </ConfirmDialog>
                                     </div>

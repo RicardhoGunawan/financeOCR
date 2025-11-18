@@ -254,8 +254,8 @@ export default function CategoriesPage() {
               Add Category
             </Button>
           </DialogTrigger>
-          <DialogContent className="w-[95vw] max-w-md sm:max-w-[425px] p-0 flex flex-col max-h-[95vh]">
-            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6">
+          <DialogContent className="w-[100vw] h-[100dvh] sm:w-[95vw] sm:h-auto sm:max-w-[425px] p-0 flex flex-col sm:max-h-[90vh] sm:rounded-lg rounded-none">
+            <DialogHeader className="px-4 pt-4 sm:px-6 sm:pt-6 flex-shrink-0">
               <DialogTitle className="text-lg sm:text-xl">
                 {editingCategory ? 'Edit Category' : 'Add New Category'}
               </DialogTitle>
@@ -265,28 +265,33 @@ export default function CategoriesPage() {
                   : 'Create a new category for organizing transactions'}
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
-              <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden min-h-0">
+              <div className="overflow-y-auto flex-1 px-4 sm:px-6 py-4 space-y-3 sm:space-y-4 overscroll-contain">
                 <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="name" className="text-xs sm:text-sm">Category Name</Label>
+                  <Label htmlFor="name" className="text-xs sm:text-sm font-medium">
+                    Category Name
+                  </Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., Groceries"
                     required
-                    className="text-sm h-9 sm:h-10"
+                    className="text-sm h-10 sm:h-10"
+                    autoComplete="off"
                   />
                 </div>
                 <div className="space-y-1.5 sm:space-y-2">
-                  <Label htmlFor="type" className="text-xs sm:text-sm">Type</Label>
+                  <Label htmlFor="type" className="text-xs sm:text-sm font-medium">
+                    Type
+                  </Label>
                   <Select
                     value={formData.type}
                     onValueChange={(value: 'income' | 'expense') =>
                       setFormData({ ...formData, type: value })
                     }
                   >
-                    <SelectTrigger className="text-sm h-9 sm:h-10">
+                    <SelectTrigger className="text-sm h-10 sm:h-10">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -295,10 +300,13 @@ export default function CategoriesPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Extra padding for mobile keyboard */}
+                <div className="h-4 sm:hidden" />
               </div>
 
-              <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50">
-                <Button type="submit" className="w-full h-9 sm:h-10 text-sm">
+              <div className="border-t border-slate-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row gap-2 sm:gap-3 bg-slate-50 flex-shrink-0">
+                <Button type="submit" className="w-full h-10 sm:h-10 text-sm font-medium">
                   {editingCategory ? 'Update' : 'Add'} Category
                 </Button>
                 <Button
@@ -308,7 +316,7 @@ export default function CategoriesPage() {
                     setDialogOpen(false);
                     resetForm();
                   }}
-                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
+                  className="w-full sm:w-auto h-10 sm:h-10 text-sm font-medium"
                 >
                   Cancel
                 </Button>
@@ -370,13 +378,12 @@ export default function CategoriesPage() {
                         description="This action will permanently remove the selected data from the system. Please confirm to continue."
                         onConfirm={() => handleDelete(category.id)}
                         confirmText="Delete"
-                        isDestructive={true} // This will apply the red style to the delete button
+                        isDestructive={true}
                       >
-                        {/* This is the trigger element (children) */}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 sm:h-10 sm:w-10"
+                          className="h-8 w-8 sm:h-9 sm:w-9"
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                         </Button>
@@ -439,13 +446,12 @@ export default function CategoriesPage() {
                         description="This action will permanently remove the selected data from the system. Please confirm to continue."
                         onConfirm={() => handleDelete(category.id)}
                         confirmText="Delete"
-                        isDestructive={true} // This will apply the red style to the delete button
+                        isDestructive={true}
                       >
-                        {/* This is the trigger element (children) */}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 sm:h-10 sm:w-10"
+                          className="h-8 w-8 sm:h-9 sm:w-9"
                         >
                           <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600" />
                         </Button>
