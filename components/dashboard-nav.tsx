@@ -74,13 +74,13 @@ const navSections = [
       { title: 'OCR Upload', href: '/dashboard/ocr', icon: ScanLine },
     ],
   },
-  {
-    label: 'Settings',
-    items: [
-      { title: 'Account Settings', href: '/dashboard/profile', icon: Settings },
-      { title: 'Logout', href: null, icon: LogOut, isLogout: true },
-    ],
-  },
+  // {
+  //   label: 'Settings',
+  //   items: [
+  //     { title: 'Account Settings', href: '/dashboard/profile', icon: Settings },
+  //     { title: 'Logout', href: null, icon: LogOut, isLogout: true },
+  //   ],
+  // },
 ];
 
 export function DashboardNav({ onClose }: DashboardNavProps) {
@@ -127,10 +127,11 @@ export function DashboardNav({ onClose }: DashboardNavProps) {
       {/* HEADER */}
       <div
         className={cn(
-          'flex items-center border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm transition-all duration-300',
-          isCollapsed ? 'justify-center p-4' : 'justify-between p-5'
+          'flex items-center border-b border-slate-700/50 bg-slate-900/50 backdrop-blur-sm transition-all duration-300 h-16',
+          isCollapsed ? 'justify-center px-4' : 'justify-between px-5'
         )}
       >
+
         {!isCollapsed && (
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">

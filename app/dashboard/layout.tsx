@@ -1,11 +1,11 @@
+// app/dashboard/layout.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { DashboardNav } from '@/components/dashboard-nav';
-import { Menu, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { DashboardHeader } from '@/components/dashboard-header';
 
 export default function DashboardLayout({
   children,
@@ -73,18 +73,11 @@ export default function DashboardLayout({
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile header */}
-        <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu className="h-6 w-6" />
-          </Button>
-          <h1 className="font-semibold text-slate-900">Finance App</h1>
-          <div className="w-10" /> {/* Spacer for centering */}
-        </div>
+        {/* Header - berlaku untuk semua page */}
+        <DashboardHeader 
+          onMenuClick={() => setSidebarOpen(true)}
+          showMobileMenu={true}
+        />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto bg-slate-50">
