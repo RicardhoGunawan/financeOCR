@@ -85,7 +85,7 @@ export function DashboardHeader({
         router.push("/dashboard/insights");
     };
 
-    const getInitials = (name?: string) => {
+    const getInitials = (name: string | null | undefined) => {
         if (!name) return "U";
         return name
             .split(" ")
@@ -110,7 +110,7 @@ export function DashboardHeader({
         <header className="bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 border-b border-slate-700/50 sticky top-0 z-30 shadow-lg backdrop-blur-sm">
             <div className="px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
-                    
+
                     {showMobileMenu && (
                         <Button
                             variant="ghost"
